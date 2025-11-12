@@ -5,24 +5,46 @@ from .models import Medico, Paziente, NotaDiario
 from django.contrib import messages
 from django.contrib.auth import logout
 from datetime import date
-from llama_cpp import Llama
+import requests
+import json
 import logging
 from django.shortcuts import get_object_or_404
 
-
 logger = logging.getLogger(__name__)
-model_path = "SoulDiaryConnectApp/models/mistral/mistral-7b-openorca.Q8_0.gguf"
-llama_model = Llama(
-    model_path=model_path,
-    n_ctx=2048,
-    n_gpu_layers=-1,
-    chat_format="chatml"
-)
 
+# Configurazione Ollama
+OLLAMA_BASE_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3.1:8b"  # Cambia in "cbt-assistant" se hai creato il modello personalizzato
+
+
+def genera_con_ollama(prompt, max_tokens=150, temperature=0.7):
+    """
+    Funzione helper per chiamare Ollama API
+    """
+    try:
+        payload = {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            }
+        }
+
+        response = requests.post(OLLAMA_BASE_URL, json=payload, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+        return result.get('response', '').strip()
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Errore nella chiamata a Ollama: {e}")
+        return f"Errore durante la generazione: {e}"
 
 
 def home(request):
     return render(request, 'SoulDiaryConnectApp/home.html')
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -50,18 +72,17 @@ def login_view(request):
 
     return render(request, 'SoulDiaryConnectApp/login.html')
 
+
 def register_view(request):
     if request.method == 'POST':
-        user_type = request.POST['user_type']  # medico o paziente
+        user_type = request.POST['user_type']
 
-        # Dettagli comuni
         nome = request.POST['nome']
         cognome = request.POST['cognome']
         email = request.POST['email']
         passwd = request.POST['passwd']
 
         if user_type == 'medico':
-            # Dettagli specifici per il medico
             codice_identificativo = request.POST['codice_identificativo']
             indirizzo_studio = request.POST['indirizzo_studio']
             citta = request.POST['citta']
@@ -69,7 +90,6 @@ def register_view(request):
             numero_telefono_studio = request.POST.get('numero_telefono_studio')
             numero_telefono_cellulare = request.POST.get('numero_telefono_cellulare')
 
-            # Creazione del medico
             Medico.objects.create(
                 codice_identificativo=codice_identificativo,
                 nome=nome,
@@ -104,9 +124,11 @@ def register_view(request):
 
     return render(request, 'SoulDiaryConnectApp/register.html')
 
+
 def logout_view(request):
     logout(request)
     return redirect('login')
+
 
 def medico_home(request):
     if request.session.get('user_type') != 'medico':
@@ -133,42 +155,43 @@ def medico_home(request):
     })
 
 
-
-# Funzione per la generazione di frasi
 def genera_frasi_di_supporto(testo):
-    print("generazione frasi supporto")
-    try:
-        #result = llama_model(f"Genera un feedback di supporto al seguente testo: {testo}", max_tokens=200)
-        #result = llama_model(f"Generate a support feedback about this text: {testo}", max_tokens=70)
-        #result = llama_model(f"Provide a supportive and motivational message for the following text: {testo}. The response should be empathetic, encouraging, and helpful.", max_tokens=70)
-        #prompt = f"The goal is to provide an empathetic and supportive feedback. The feedback should express empathy for the emotions described. Provide motivation and encouragement; offer practical advice to improve the situation. The text is: {testo}"
-        prompt = f"""
-        You are a supportive assistant. Use the following example to craft your response.
+    """
+    Genera frasi di supporto empatico per il paziente usando Ollama
+    """
+    print("Generazione frasi supporto con Ollama")
+
+    prompt = f"""Sei uno psicoterapeuta CBT che fornisce feedback riflessivi ai pazienti. Il tuo obiettivo è aiutare il paziente a:
+            Riconoscere le emozioni senza giudizio
+            Identificare pensieri automatici sottostanti
+            Sviluppare consapevolezza sui pattern emotivi
+            Riflettere su strategie di coping più funzionali
+            
+            IMPORTANTE: 
+            - Mantieni un tono professionale ma empatico
+            - NON fare domande dirette al paziente
+            - NON offrire consigli generici o frasi motivazionali banali
+            - Usa tecniche CBT come ristrutturazione cognitiva, validazione emotiva, psicoeducazione
+            - Rispondi solo in italiano
 
         Example:
         Text: "I failed my exam and feel like giving up."
         Response: "I'm so sorry to hear about your exam. It's okay to feel disappointed, but this doesn't define your worth. Consider revising your study strategy and asking for help. You've got this!"
 
         Now, respond to the following text:
-        {testo}
-        """
+{testo}
 
-        result = llama_model(prompt, max_tokens=150)
-        print(result['choices'][0]['text'].strip())
-        return result['choices'][0]['text'].strip()
-    except Exception as e:
-        return f"Errore durante la generazione: {e}"
+Fornisci solo la risposta di supporto, senza premesse:"""
+
+    return genera_con_ollama(prompt, max_tokens=150, temperature=0.3)
 
 
 def genera_frasi_cliniche(testo, medico):
-    print("generazione commenti clinici")
     """
-    Genera un testo clinico basato sui parametri specifici del medico.
+    Genera note cliniche CBT personalizzate in base alle preferenze del medico
+    """
+    print("Generazione commenti clinici con Ollama")
 
-    :param testo: Il testo fornito dal paziente.
-    :param medico: L'oggetto medico contenente i parametri di personalizzazione.
-    :return: Il testo generato o un messaggio di errore.
-    """
     try:
         # Determina i parametri dal medico
         tipo_nota = medico.tipo_nota  # True per "strutturato", False per "non strutturato"
@@ -177,7 +200,7 @@ def genera_frasi_cliniche(testo, medico):
         testo_parametri = medico.testo_parametri.split(".:;!") if medico.testo_parametri else []
 
         # Determina il max_tokens in base alla lunghezza_nota
-        max_tokens = 250 if lunghezza_nota else 150
+        max_tokens = 300 if lunghezza_nota else 150
 
         if tipo_nota:
             # Genera il prompt strutturato con parametri
@@ -186,33 +209,31 @@ def genera_frasi_cliniche(testo, medico):
             )
 
             prompt = f"""
-                You are a psychotherapist specializing in CBT. Analyze the following text and provide a clinical assessment.
+                        You are a psychotherapist specializing in CBT. Analyze the following text and provide a clinical assessment. Respond only in Italian.
 
-                Example:
-                Text: "Today I failed my exam and feel like giving up."
-                Response: 
-                {parametri_strutturati}
-                
-                Parameters:
-                {tipo_parametri}
+                        Example:
+                        Text: "Today I failed my exam and feel like giving up."
+                        Response: 
+                        {parametri_strutturati}
 
-                Now analyze this text:
-                {testo}
+                        Parameters:
+                        {tipo_parametri}
 
-                Respond in the format of the example response:
-                """
+                        Now analyze this text:
+                        {testo}
+
+                        Respond in the format of the example response:
+                        """
         else:
             # Genera il prompt non strutturato
             prompt = f"""
-                You are a psychotherapist specializing in CBT. Analyze the following text and provide a clinical assessment. The text is: {testo}
-                """
+                        You are a psychotherapist specializing in CBT. Analyze the following text and provide a clinical assessment. Respond only in Italian. The text is: {testo}
+                        """
 
-        # Genera il risultato usando il modello
-        result = llama_model(prompt, max_tokens=max_tokens)
-        print(result['choices'][0]['text'].strip())
-        return result['choices'][0]['text'].strip()
+        return genera_con_ollama(prompt, max_tokens=max_tokens, temperature=0.6)
 
     except Exception as e:
+        logger.error(f"Errore nella generazione clinica: {e}")
         return f"Errore durante la generazione: {e}"
 
 
@@ -225,29 +246,23 @@ def paziente_home(request):
         return redirect('/login/')
 
     paziente = Paziente.objects.get(codice_fiscale=paziente_id)
-    #print(f"Paziente trovato: {paziente.nome} {paziente.cognome}")
-    #print(f"Medico associato (ID): {paziente.med}")
 
     try:
         medico = paziente.med
-        #print(f"Medico trovato: {medico.nome} {medico.cognome}")
     except Medico.DoesNotExist:
         medico = None
         print("Nessun medico trovato associato a questo paziente.")
 
     if request.method == 'POST':
         testo_paziente = request.POST.get('desc')
-        generate_response_flag = request.POST.get('generateResponse') == 'on'  # Checkbox per generare frasi di supporto
+        generate_response_flag = request.POST.get('generateResponse') == 'on'
         testo_supporto = ""
         testo_clinico = ""
 
         if testo_paziente:
             testo_supporto = genera_frasi_di_supporto(testo_paziente)
-
-            # Genera il feedback clinico in base ai parametri del medico associato
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico)
 
-            # Crea una nuova nota di diario
             NotaDiario.objects.create(
                 paz=paziente,
                 testo_paziente=testo_paziente,
@@ -261,7 +276,7 @@ def paziente_home(request):
     return render(request, 'SoulDiaryConnectApp/paziente_home.html', {
         'paziente': paziente,
         'note_diario': note_diario,
-        'medico' : medico,
+        'medico': medico,
     })
 
 
@@ -272,6 +287,7 @@ def modifica_testo_medico(request, nota_id):
         nota.testo_medico = testo_medico
         nota.save()
         return redirect(f'/medico/home/?paziente_id={nota.paz.codice_fiscale}')
+
 
 def personalizza_generazione(request):
     if request.session.get('user_type') != 'medico':
