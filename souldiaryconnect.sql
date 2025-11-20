@@ -14,8 +14,7 @@ CREATE TABLE medico (
     numero_telefono_studio varchar(13) UNIQUE,
     numero_telefono_cellulare varchar(13) UNIQUE,
     email varchar(50) UNIQUE NOT NULL,
-    password varchar(50) NOT NULL,
-    passwd varchar(50) NOT NULL
+    password varchar(50) NOT NULL
 );
 
 DROP TABLE IF EXISTS paziente;
@@ -43,7 +42,7 @@ CREATE TABLE nota_diario (
     testo_supporto varchar(1000),
     testo_clinico varchar(1000) NOT NULL,
     testo_medico varchar(1000),
-    data_nota date NOT NULL,
+    data_nota timestamp NOT NULL,
 
     FOREIGN KEY (paz) REFERENCES paziente(codice_fiscale)
         ON UPDATE CASCADE ON DELETE CASCADE

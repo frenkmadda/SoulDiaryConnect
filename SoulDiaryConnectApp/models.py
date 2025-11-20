@@ -10,11 +10,14 @@ class Medico(models.Model):
     numero_telefono_studio = models.CharField(max_length=13, unique=True, null=True, blank=True)
     numero_telefono_cellulare = models.CharField(max_length=13, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
-    passwd = models.CharField(max_length=50)
+    password = models.CharField(max_length=50)
     tipo_nota = models.BooleanField(null=True, blank=True)
     lunghezza_nota = models.BooleanField(null=True, blank=True)
     tipo_parametri = models.CharField(max_length=400, null=True, blank=True)
     testo_parametri = models.CharField(max_length=2500, null=True, blank=True)
+
+    class Meta:
+        db_table = 'medico'
 
 class Paziente(models.Model):
     codice_fiscale = models.CharField(max_length=16, primary_key=True)
@@ -23,7 +26,10 @@ class Paziente(models.Model):
     data_di_nascita = models.DateField()
     med = models.ForeignKey(Medico, on_delete=models.CASCADE)
     email = models.EmailField(unique=True)
-    passwd = models.CharField(max_length=50)
+    password = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = 'paziente'
 
 class NotaDiario(models.Model):
     id = models.AutoField(primary_key=True)
@@ -32,7 +38,10 @@ class NotaDiario(models.Model):
     testo_supporto = models.TextField(null=True, blank=True)
     testo_clinico = models.TextField()
     testo_medico = models.TextField(null=True, blank=True)
-    data_nota = models.DateField()
+    data_nota = models.DateTimeField()
+
+    class Meta:
+        db_table = 'nota_diario'
 
 class Messaggio(models.Model):
     id = models.AutoField(primary_key=True)
@@ -41,5 +50,8 @@ class Messaggio(models.Model):
     testo = models.TextField()
     data_messaggio = models.DateField()
     mittente = models.CharField(max_length=12)
+
+    class Meta:
+        db_table = 'messaggio'
 
 

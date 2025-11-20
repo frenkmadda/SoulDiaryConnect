@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Medico, Paziente, NotaDiario
 from django.contrib import messages
 from django.contrib.auth import logout
-from datetime import date
+from datetime import datetime
 import requests
 import logging
 import re
@@ -78,8 +78,8 @@ def login_view(request):
         email = request.POST['email']
         password = request.POST['password']
 
-        medico = Medico.objects.filter(email=email, passwd=password).first()
-        paziente = Paziente.objects.filter(email=email, passwd=password).first()
+        medico = Medico.objects.filter(email=email, password=password).first()
+        paziente = Paziente.objects.filter(email=email, password=password).first()
 
         if medico:
             request.session['user_type'] = 'medico'
@@ -107,7 +107,7 @@ def register_view(request):
         nome = request.POST['nome']
         cognome = request.POST['cognome']
         email = request.POST['email']
-        passwd = request.POST['passwd']
+        password = request.POST['password']
 
         if user_type == 'medico':
             codice_identificativo = request.POST['codice_identificativo']
@@ -127,7 +127,7 @@ def register_view(request):
                 numero_telefono_studio=numero_telefono_studio,
                 numero_telefono_cellulare=numero_telefono_cellulare,
                 email=email,
-                passwd=passwd,
+                password=password,
             )
         elif user_type == 'paziente':
             # Dettagli specifici per il paziente
@@ -143,7 +143,7 @@ def register_view(request):
                 data_di_nascita=data_di_nascita,
                 med=Medico.objects.get(codice_identificativo=med),
                 email=email,
-                passwd=passwd,
+                password=password,
             )
 
         messages.success(request, 'Registrazione completata con successo!')
@@ -188,7 +188,7 @@ def genera_frasi_di_supporto(testo):
     """
     print("Generazione frasi supporto con Ollama")
 
-    prompt = prompt = f"""
+    prompt = f"""
         You are a supportive assistant. Use the following example to craft your response.
 
         Example:
@@ -284,7 +284,7 @@ def paziente_home(request):
                 testo_paziente=testo_paziente,
                 testo_supporto=testo_supporto,
                 testo_clinico=testo_clinico,
-                data_nota=date.today()
+                data_nota=datetime.now()
             )
 
     note_diario = NotaDiario.objects.filter(paz=paziente).order_by('-data_nota')
