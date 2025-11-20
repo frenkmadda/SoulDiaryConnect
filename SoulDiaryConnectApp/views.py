@@ -6,6 +6,7 @@ from datetime import datetime
 import requests
 import logging
 import re
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -351,3 +352,26 @@ def elimina_nota(request, nota_id):
         nota.delete()
         return redirect('/paziente/home/')
     return render(request, 'SoulDiaryConnectApp/conferma_eliminazione.html', {'nota': nota})
+
+
+def rigenera_frase_clinica(request):
+    """
+    View per rigenerare la frase clinica di una nota specifica (AJAX).
+    """
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if request.method == 'POST' and is_ajax:
+        nota_id = request.POST.get('nota_id')
+        if not nota_id:
+            return JsonResponse({'error': 'ID nota mancante.'}, status=400)
+        try:
+            nota = NotaDiario.objects.get(id=nota_id)
+            medico = nota.paz.med
+            testo_paziente = nota.testo_paziente
+            nuova_frase = genera_frasi_cliniche(testo_paziente, medico)
+            # Sostituisci la frase clinica precedente
+            nota.testo_clinico = nuova_frase
+            nota.save(update_fields=["testo_clinico"])
+            return JsonResponse({'testo_clinico': nuova_frase})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Richiesta non valida.'}, status=400)

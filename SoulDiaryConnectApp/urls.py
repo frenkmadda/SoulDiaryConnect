@@ -13,6 +13,7 @@ urlpatterns = [
     path('medico/note/<int:nota_id>/modifica/', views.modifica_testo_medico, name='modifica_testo_medico'),
     path('medico/personalizza/', views.personalizza_generazione, name='personalizza_generazione'),
     path('paziente/note/<int:nota_id>/elimina/', views.elimina_nota, name='elimina_nota'),
+    path('medico/rigenera_frase_clinica/', views.rigenera_frase_clinica, name='rigenera_frase_clinica'),
 ]
 
 if settings.DEBUG:

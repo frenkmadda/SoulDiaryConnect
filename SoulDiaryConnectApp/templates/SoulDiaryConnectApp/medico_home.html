@@ -139,6 +139,35 @@
       buttons.forEach(btn => btn.classList.remove('selected'));
       selectedButton.classList.add('selected');
     }
+
+    function rigeneraFraseClinica(notaId, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Rigenerazione...';
+      fetch('{% url "rigenera_frase_clinica" %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'nota_id=' + notaId
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.testo_clinico) {
+          document.getElementById('testo-clinico-' + notaId).textContent = data.testo_clinico;
+        } else {
+          alert(data.error || 'Errore nella rigenerazione.');
+        }
+        btn.disabled = false;
+        btn.textContent = '🔄 Rigenera frase clinica';
+      })
+      .catch(() => {
+        alert('Errore di rete.');
+        btn.disabled = false;
+        btn.textContent = '🔄 Rigenera frase clinica';
+      });
+    }
   </script>
 </head>
 <body>
@@ -204,7 +233,10 @@
                 {% if nota.testo_clinico %}
                   <div class="note-separator"></div>
                   <div class="clinical-text">
-                    <p><strong>🔬 Analisi clinica:</strong> {{ nota.testo_clinico }}</p>
+                    <p style="margin-bottom:8px;">
+                      <button type="button" class="save-btn" style="margin-bottom:8px;" onclick="rigeneraFraseClinica({{ nota.id }}, this)">🔄 Rigenera frase clinica</button>
+                    </p>
+                    <p><strong>🔬 Analisi clinica:</strong> <span id="testo-clinico-{{ nota.id }}">{{ nota.testo_clinico }}</span></p>
                   </div>
                 {% endif %}
 
