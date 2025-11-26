@@ -278,7 +278,9 @@ def paziente_home(request):
         testo_clinico = ""
 
         if testo_paziente:
-            testo_supporto = genera_frasi_di_supporto(testo_paziente)
+            if generate_response_flag:
+                testo_supporto = genera_frasi_di_supporto(testo_paziente)
+
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico)
 
             NotaDiario.objects.create(
