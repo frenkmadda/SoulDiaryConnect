@@ -174,7 +174,7 @@
   <div class="header">
     <div class="header-left">
       <img src="/media/logo.png" alt="SoulDiaryConnect">
-      <h1>Benvenuto, Dr. {{ medico.nome }} {{ medico.cognome }}</h1>
+      <h1>Benvenuto, Dr. {{ medico.nome }} {{ medico.cognome }} [Codice ID: {{ medico.codice_identificativo }}]</h1>
     </div>
     <div class="header-actions">
       <a href="{% url 'personalizza_generazione' %}" class="settings-btn">

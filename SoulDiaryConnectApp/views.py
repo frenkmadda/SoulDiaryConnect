@@ -111,7 +111,19 @@ def register_view(request):
         password = request.POST['password']
 
         if user_type == 'medico':
-            codice_identificativo = request.POST['codice_identificativo']
+            # Generazione automatica del codice identificativo
+            ultimo_medico = Medico.objects.all().order_by('-codice_identificativo').first()
+            if ultimo_medico:
+                try:
+                    ultimo_codice = int(ultimo_medico.codice_identificativo)
+                    nuovo_codice = str(ultimo_codice + 1)
+                except ValueError:
+                    # Se il codice esistente non è numerico, inizia da 1
+                    nuovo_codice = '1'
+            else:
+                # Primo medico, inizia da 1
+                nuovo_codice = '1'
+            
             indirizzo_studio = request.POST['indirizzo_studio']
             citta = request.POST['citta']
             numero_civico = request.POST['numero_civico']
@@ -119,7 +131,7 @@ def register_view(request):
             numero_telefono_cellulare = request.POST.get('numero_telefono_cellulare')
 
             Medico.objects.create(
-                codice_identificativo=codice_identificativo,
+                codice_identificativo=nuovo_codice,
                 nome=nome,
                 cognome=cognome,
                 indirizzo_studio=indirizzo_studio,
