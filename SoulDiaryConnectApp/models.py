@@ -18,6 +18,8 @@ class Medico(models.Model):
 
     class Meta:
         db_table = 'medico'
+        verbose_name = 'Medico'
+        verbose_name_plural = 'Medici'
 
 class Paziente(models.Model):
     codice_fiscale = models.CharField(max_length=16, primary_key=True)
@@ -30,6 +32,8 @@ class Paziente(models.Model):
 
     class Meta:
         db_table = 'paziente'
+        verbose_name = 'Paziente'
+        verbose_name_plural = 'Pazienti'
 
 class NotaDiario(models.Model):
     id = models.AutoField(primary_key=True)
@@ -42,6 +46,8 @@ class NotaDiario(models.Model):
 
     class Meta:
         db_table = 'nota_diario'
+        verbose_name = 'Nota Diario'
+        verbose_name_plural = 'Note Diario'
 
 class Messaggio(models.Model):
     id = models.AutoField(primary_key=True)
@@ -53,5 +59,7 @@ class Messaggio(models.Model):
 
     class Meta:
         db_table = 'messaggio'
+        verbose_name = 'Messaggio'
+        verbose_name_plural = 'Messaggi'
 
 
