@@ -467,6 +467,105 @@ textarea:focus {
     background: #94a3b8
 }
 
+/* Modal Base Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 41, 59, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    padding: 32px 28px;
+    text-align: center;
+    min-width: 340px;
+    max-width: 540px;
+    width: 100%;
+}
+
+.modal-content h2 {
+    font-size: 22px;
+    margin-bottom: 12px;
+}
+
+.modal-content p {
+    font-size: 16px;
+    color: #475569;
+    margin-bottom: 16px;
+    word-break: break-word;
+}
+
+/* Loading Modal */
+.loading-modal .modal-content {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #1976d2;
+}
+
+.loading-modal h2 {
+    color: #1976d2 !important;
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+
+.loading-animation {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.loading-dot {
+    width: 12px;
+    height: 12px;
+    background: #1976d2;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.note-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
 @media (max-width: 1024px) {
     .main-container {
         flex-direction: column

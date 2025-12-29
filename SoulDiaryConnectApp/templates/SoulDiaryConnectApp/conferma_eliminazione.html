@@ -11,7 +11,7 @@
         <div class="custom-alert">
             <h2>Attenzione!</h2>
             <p>Sei sicuro di voler <b>eliminare definitivamente</b> questa nota?</p>
-            <p><strong>Data:</strong> {{ nota.data_nota|date:"d/m/Y" }}</p>
+            <p><strong>Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
             <p><strong>Nota:</strong> {{ nota.testo_paziente }}</p>
         </div>
         <button class="btn-danger" id="openModalBtn">Elimina definitivamente</button>

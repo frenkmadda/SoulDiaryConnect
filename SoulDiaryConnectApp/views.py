@@ -16,8 +16,8 @@ OLLAMA_BASE_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.1:8b"  # Cambia in "cbt-assistant" se hai creato il modello personalizzato
 
 # Configurazione lunghezza note cliniche (in caratteri)
-LUNGHEZZA_NOTA_BREVE = 350
-LUNGHEZZA_NOTA_LUNGA = 800
+LUNGHEZZA_NOTA_BREVE = 250
+LUNGHEZZA_NOTA_LUNGA = 500
 
 
 def genera_con_ollama(prompt, max_chars=None, temperature=0.7):
@@ -469,10 +469,13 @@ def get_emoji_for_emotion(emozione):
     return EMOZIONI_EMOJI.get(emozione_lower, '💭')
 
 
-def _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars):
+def _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente):
     """Prompt per nota strutturata breve"""
     return f"""Sei un assistente per uno psicoterapeuta. Analizza il seguente testo e fornisci una valutazione clinica strutturata e CONCISA.
 
+CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{contesto_precedente}
+
 Esempio:
 Testo: "Oggi ho fallito il mio esame e ho voglia di arrendermi."
 Risposta:
@@ -481,23 +484,43 @@ Risposta:
 Parametri da utilizzare:
 {tipo_parametri}
 
-ISTRUZIONI IMPORTANTI:
+ISTRUZIONI FONDAMENTALI:
 - La risposta deve essere BREVE e SINTETICA (massimo {max_chars} caratteri)
 - FORMATO OBBLIGATORIO: ogni parametro deve essere su una NUOVA RIGA nel formato "NomeParametro: valore"
 - Vai a capo dopo ogni parametro
-- Non usare markdown, elenchi puntati o simboli
-- Scrivi solo in italiano
-- Completa sempre la frase, non troncare mai a metà
-- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito" o simili
-- Inizia DIRETTAMENTE con il primo parametro
 
-Ora analizza questo testo:
+REGOLE PER L'ANALISI:
+1. CONCENTRATI AL 90% SULLA NOTA CORRENTE - analizza principalmente il testo attuale
+2. Le note precedenti sono SOLO contesto di supporto - NON descriverle una per una
+3. Puoi fare riferimenti generici tipo "rispetto alle note precedenti", "in continuità con pattern emersi in precedenza"
+4. Se menzioni una nota specifica precedente, cita SEMPRE la data completa (es: "come nella nota del 15/12/2025 alle ore 14:30")
+5. NON elencare o riassumere ogni singola nota precedente
+6. NON usare espressioni come "La nota 1", "La nota 2", "La nota 3" senza data e orario
+
+COSA FARE:
+✓ Analizzare gli aspetti emotivi, cognitivi e comportamentali della NOTA CORRENTE
+✓ Notare eventuali cambiamenti o pattern rispetto al passato (in modo generico)
+✓ Focalizzarsi su ciò che emerge OGGI nel testo
+
+COSA NON FARE:
+✗ NON descrivere in dettaglio le note precedenti
+✗ NON fare un riassunto di ogni nota precedente
+✗ NON citare numeri di note senza date
+✗ NON usare markdown, elenchi puntati o simboli
+✗ NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi"
+
+Completa sempre la frase, non troncare mai a metà. Inizia DIRETTAMENTE con il primo parametro.
+
+Ora analizza questo testo (FOCALIZZATI SU QUESTO):
 {testo}"""
 
 
-def _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars):
+def _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente):
     """Prompt per nota strutturata lunga"""
     return f"""Sei un assistente per uno psicoterapeuta. Analizza il seguente testo e fornisci una valutazione clinica strutturata e DETTAGLIATA.
+
+CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{contesto_precedente}
 
 Esempio:
 Testo: "Oggi ho fallito il mio esame e ho voglia di arrendermi."
@@ -507,60 +530,165 @@ Risposta:
 Parametri da utilizzare:
 {tipo_parametri}
 
-ISTRUZIONI IMPORTANTI:
+ISTRUZIONI FONDAMENTALI:
 - La risposta deve essere DETTAGLIATA e APPROFONDITA (massimo {max_chars} caratteri)
 - FORMATO OBBLIGATORIO: ogni parametro deve essere su una NUOVA RIGA nel formato "NomeParametro: valore"
 - Vai a capo dopo ogni parametro
 - Fornisci analisi complete per ogni parametro
-- Non usare markdown, elenchi puntati o simboli
-- Scrivi solo in italiano
-- Completa sempre la frase, non troncare mai a metà
-- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito" o simili
-- Inizia DIRETTAMENTE con il primo parametro
 
-Ora analizza questo testo:
+REGOLE PER L'ANALISI:
+1. CONCENTRATI AL 80% SULLA NOTA CORRENTE - analizza principalmente il testo attuale in profondità
+2. Le note precedenti sono SOLO contesto di supporto - NON descriverle una per una
+3. Puoi fare riferimenti come "Si nota un miglioramento rispetto al pattern ansioso emerso nelle settimane precedenti"
+4. Se menzioni una nota specifica precedente, cita SEMPRE la data completa (es: "diversamente da quanto emerso nella nota del 15/12/2025 alle ore 14:30")
+5. NON elencare o riassumere ogni singola nota precedente
+6. NON usare espressioni come "Nella nota 1", "La nota 2 mostra", "Nella nota 3" senza data e orario
+7. Puoi usare espressioni generiche come "nelle note precedenti", "in passato", "rispetto a situazioni simili"
+
+COSA FARE:
+✓ Analizzare in profondità la NOTA CORRENTE: emozioni, pensieri, comportamenti
+✓ Identificare schemi cognitivi e pattern comportamentali visibili OGGI
+✓ Notare progressi o regressioni rispetto al contesto generale passato
+✓ Fornire osservazioni cliniche dettagliate sulla situazione ATTUALE
+
+COSA NON FARE:
+✗ NON dedicare paragrafi interi a descrivere le note precedenti
+✗ NON fare un riassunto cronologico delle note passate
+✗ NON citare numeri di note senza date complete
+✗ NON usare markdown, elenchi puntati o simboli
+✗ NON usare frasi introduttive come "Ecco la nota clinica"
+
+Completa sempre la frase, non troncare mai a metà. Inizia DIRETTAMENTE con il primo parametro.
+
+Ora analizza questo testo in profondità (QUESTO È IL FOCUS PRINCIPALE):
 {testo}"""
 
 
-def _genera_prompt_non_strutturato_breve(testo, max_chars):
+def _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente):
     """Prompt per nota non strutturata breve"""
     return f"""Sei un assistente di uno psicoterapeuta specializzato. Analizza il seguente testo e fornisci una valutazione clinica discorsiva BREVE.
 
-ISTRUZIONI IMPORTANTI:
-- La risposta deve essere BREVE e SINTETICA (massimo {max_chars} caratteri)
-- Scrivi in modo discorsivo, senza struttura a punti
-- Non usare elenchi, grassetti, markdown, simboli o titoli
-- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito", "La valutazione è" o simili
-- Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico
-- Scrivi solo in italiano
-- Completa sempre la frase, non troncare mai a metà
+CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{contesto_precedente}
 
-Testo da analizzare:
+ISTRUZIONI FONDAMENTALI:
+- La risposta deve essere BREVE e SINTETICA (massimo {max_chars} caratteri)
+- Scrivi in modo discorsivo, come un commento clinico professionale
+- NON usare elenchi, grassetti, markdown, simboli o titoli
+
+REGOLE PER L'ANALISI:
+1. CONCENTRATI AL 90% SULLA NOTA CORRENTE - analizza principalmente il testo attuale
+2. Le note precedenti sono SOLO contesto - menzionale brevemente se utile
+3. Usa espressioni generiche come "rispetto alle note precedenti", "diversamente da prima"
+4. Se menzioni una nota specifica, cita SEMPRE la data completa (es: "rispetto alla nota del 15/12/2025 alle ore 14:30")
+5. NON dedicare frasi intere a riassumere le note precedenti
+6. NON usare "La nota 1", "La nota 2", "Nella nota 3" senza date
+
+COSA FARE:
+✓ Analizzare il contenuto emotivo e psicologico della NOTA CORRENTE
+✓ Identificare i vissuti emotivi emergenti OGGI
+✓ Notare eventuali cambiamenti generali rispetto al passato
+✓ Scrivere in modo fluido e professionale
+
+COSA NON FARE:
+✗ NON descrivere le note precedenti una per una
+✗ NON fare un elenco delle emozioni passate
+✗ NON citare numeri di note senza date
+✗ NON usare frasi introduttive come "Ecco la nota clinica", "La valutazione è"
+
+Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico. Completa sempre la frase.
+
+Testo da analizzare (QUESTO È IL FOCUS):
 {testo}"""
 
 
-def _genera_prompt_non_strutturato_lungo(testo, max_chars):
+def _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente):
     """Prompt per nota non strutturata lunga"""
     return f"""Sei un assistente di uno psicoterapeuta specializzato. Analizza il seguente testo e fornisci una valutazione clinica discorsiva DETTAGLIATA e APPROFONDITA.
 
-ISTRUZIONI IMPORTANTI:
-- La risposta deve essere DETTAGLIATA e COMPLETA (massimo {max_chars} caratteri)
-- Scrivi in modo discorsivo, senza struttura a punti
-- Approfondisci gli aspetti emotivi, cognitivi e comportamentali
-- Non usare elenchi, grassetti, markdown, simboli o titoli
-- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito", "La valutazione è" o simili
-- Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico
-- Scrivi solo in italiano
-- Completa sempre la frase, non troncare mai a metà
+CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{contesto_precedente}
 
-Testo da analizzare:
+ISTRUZIONI FONDAMENTALI:
+- La risposta deve essere DETTAGLIATA e COMPLETA (massimo {max_chars} caratteri)
+- Scrivi in modo discorsivo e professionale, come una nota clinica narrativa
+- Approfondisci gli aspetti emotivi, cognitivi e comportamentali
+- NON usare elenchi, grassetti, markdown, simboli o titoli
+
+REGOLE PER L'ANALISI:
+1. CONCENTRATI AL 80% SULLA NOTA CORRENTE - analizza in profondità il testo attuale
+2. Le note precedenti sono contesto di supporto - menzionale se aiutano a comprendere l'evoluzione
+3. Usa espressioni come "Si osserva un'evoluzione rispetto al pattern precedente", "Diversamente dalle situazioni passate"
+4. Se menzioni una nota specifica, cita SEMPRE la data completa (es: "come emerso nella nota del 15/12/2025 alle ore 14:30")
+5. NON dedicare paragrafi interi a riassumere le note precedenti
+6. NON usare "La nota 1 descrive", "Nella nota 2", "La nota 3 rivela" senza date
+
+COSA FARE:
+✓ Analizzare in profondità il contenuto emotivo della NOTA CORRENTE
+✓ Esplorare i meccanismi cognitivi e i pattern comportamentali visibili OGGI
+✓ Identificare i vissuti emotivi, le difese psicologiche, gli schemi ricorrenti nella situazione ATTUALE
+✓ Contestualizzare in modo generico rispetto all'evoluzione del paziente
+✓ Scrivere in modo fluido, professionale e clinicamente accurato
+
+COSA NON FARE:
+✗ NON fare un riassunto cronologico dettagliato delle note passate
+✗ NON descrivere ogni singola nota precedente con paragrafi dedicati
+✗ NON citare numeri di note senza date e orari completi
+✗ NON usare espressioni come "Nella nota 1...", "La nota 2 mostra..." senza date
+✗ NON usare frasi introduttive come "Ecco la nota clinica", "La valutazione è"
+
+Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico ATTUALE. Completa sempre la frase.
+
+Testo da analizzare in profondità (QUESTO È IL FOCUS PRINCIPALE):
 {testo}"""
 
 
-def genera_frasi_cliniche(testo, medico):
+def _recupera_contesto_note_precedenti(paziente, limite=5, escludi_nota_id=None):
+    """
+    Recupera le ultime note del paziente per fornire contesto, escludendo la nota corrente.
+
+    Args:
+        paziente: Oggetto Paziente
+        limite: Numero massimo di note da recuperare (default 5)
+        escludi_nota_id: ID della nota da escludere (tipicamente la nota corrente) (opzionale)
+
+    Returns:
+        String con il riepilogo delle note precedenti
+    """
+    # Filtra le note del paziente
+    query = NotaDiario.objects.filter(paz=paziente)
+
+    # Escludi la nota corrente se specificata
+    if escludi_nota_id is not None:
+        query = query.exclude(id=escludi_nota_id)
+
+    # Prendi le ultime 'limite' note
+    note_precedenti = query.order_by('-data_nota')[:limite]
+
+    if not note_precedenti.exists():
+        return "Nessuna nota precedente disponibile."
+
+    contesto = []
+    for i, nota in enumerate(reversed(list(note_precedenti)), 1):
+        data_ora_formattata = nota.data_nota.strftime('%d/%m/%Y alle ore %H:%M')
+        emozione = nota.emozione_predominante or "non specificata"
+        testo_breve = nota.testo_paziente[:150] + "..." if len(nota.testo_paziente) > 150 else nota.testo_paziente
+        contesto.append(f"Nota {i} (scritta il {data_ora_formattata}) - Emozione: {emozione}\nTesto: {testo_breve}")
+
+    return "\n\n".join(contesto)
+
+
+def genera_frasi_cliniche(testo, medico, paziente, nota_id=None):
     """
     Genera note cliniche personalizzate in base alle preferenze del medico.
-    
+    Include il contesto delle ultime 5 note del paziente (esclusa quella corrente) per una valutazione più completa.
+
+    Args:
+        testo: Testo della nota del paziente
+        medico: Oggetto Medico
+        paziente: Oggetto Paziente
+        nota_id: ID della nota corrente da escludere dal contesto (opzionale)
+
     Gestisce 4 combinazioni:
     - Strutturata + Breve
     - Strutturata + Lunga
@@ -578,6 +706,9 @@ def genera_frasi_cliniche(testo, medico):
         # Determina la lunghezza massima in caratteri
         max_chars = LUNGHEZZA_NOTA_LUNGA if lunghezza_nota else LUNGHEZZA_NOTA_BREVE
 
+        # Recupera il contesto delle note precedenti (esclusa quella corrente)
+        contesto_precedente = _recupera_contesto_note_precedenti(paziente, limite=5, escludi_nota_id=nota_id)
+
         if tipo_nota:
             # Nota strutturata
             parametri_strutturati = "\n".join(
@@ -585,18 +716,18 @@ def genera_frasi_cliniche(testo, medico):
             )
             if lunghezza_nota:
                 # Strutturata + Lunga
-                prompt = _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars)
+                prompt = _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente)
             else:
                 # Strutturata + Breve
-                prompt = _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars)
+                prompt = _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente)
         else:
             # Nota non strutturata
             if lunghezza_nota:
                 # Non Strutturata + Lunga
-                prompt = _genera_prompt_non_strutturato_lungo(testo, max_chars)
+                prompt = _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente)
             else:
                 # Non Strutturata + Breve
-                prompt = _genera_prompt_non_strutturato_breve(testo, max_chars)
+                prompt = _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente)
 
         return genera_con_ollama(prompt, max_chars=max_chars, temperature=0.6)
 
@@ -632,7 +763,7 @@ def paziente_home(request):
             if generate_response_flag:
                 testo_supporto = genera_frasi_di_supporto(testo_paziente)
 
-            testo_clinico = genera_frasi_cliniche(testo_paziente, medico)
+            testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
             emozione_predominante = analizza_sentiment(testo_paziente)
 
             NotaDiario.objects.create(
@@ -722,8 +853,10 @@ def rigenera_frase_clinica(request):
         try:
             nota = NotaDiario.objects.get(id=nota_id)
             medico = nota.paz.med
+            paziente = nota.paz
             testo_paziente = nota.testo_paziente
-            nuova_frase = genera_frasi_cliniche(testo_paziente, medico)
+            # Passa nota_id per escludere la nota corrente dal contesto
+            nuova_frase = genera_frasi_cliniche(testo_paziente, medico, paziente, nota_id=nota.id)
             # Sostituisci la frase clinica precedente
             nota.testo_clinico = nuova_frase
             nota.save(update_fields=["testo_clinico"])

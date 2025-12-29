@@ -75,7 +75,7 @@
             {% if note_diario %}
                 {% for nota in note_diario %}
                     <div class="note-card">
-                        <p><strong>Data:</strong> {{ nota.data_nota|date:"d/m/Y" }}</p>
+                        <p><strong>Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
                         <p><strong>Nota:</strong> {{ nota.testo_paziente }}</p>
 
                         {% if nota.testo_supporto %}
@@ -106,8 +106,8 @@
                         {% endif %}
                         <button type="button" class="delete-btn" 
     data-id="{{ nota.id }}" 
-    data-data="{{ nota.data_nota|date:'d/m/Y'|escapejs }}" 
-    data-nota="{{ nota.testo_paziente|escapejs }}" 
+    data-data="{{ nota.data_nota|date:'d/m/Y' }} alle ore {{ nota.data_nota|date:'H:i'|escapejs }}"
+    data-nota="{{ nota.testo_paziente|escapejs }}"
     onclick="openDeleteModalFromButton(this)" 
     style="background:#dc3545;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;margin-top:10px;">
     Elimina
