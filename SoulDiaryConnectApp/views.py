@@ -733,6 +733,31 @@ def rigenera_frase_clinica(request):
     return JsonResponse({'error': 'Richiesta non valida.'}, status=400)
 
 
+def genera_frase_supporto_nota(request, nota_id):
+    """
+    View per generare la frase di supporto per una nota specifica che non ce l'ha.
+    """
+    if request.session.get('user_type') != 'paziente':
+        return redirect('/login/')
+
+    nota = get_object_or_404(NotaDiario, id=nota_id)
+
+    # Sicurezza: solo il proprietario può generare la frase di supporto
+    if nota.paz.codice_fiscale != request.session.get('user_id'):
+        return redirect('/paziente/home/')
+
+    if request.method == 'POST':
+        # Genera la frase di supporto se non esiste già
+        if not nota.testo_supporto or nota.testo_supporto.strip() == '':
+            testo_supporto = genera_frasi_di_supporto(nota.testo_paziente)
+            nota.testo_supporto = testo_supporto
+            nota.save(update_fields=["testo_supporto"])
+
+        return redirect('/paziente/home/')
+
+    return redirect('/paziente/home/')
+
+
 def analisi_paziente(request):
     """
     Pagina dedicata alle analisi del paziente selezionato

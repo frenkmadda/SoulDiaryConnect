@@ -83,6 +83,19 @@
                             <div class="support-text">
                                 <p><strong>💙 Supporto:</strong> {{ nota.testo_supporto }}</p>
                             </div>
+                        {% else %}
+                            <div class="note-separator"></div>
+                            <div class="generate-support-section">
+                                <p style="color: #64748b; font-style: italic; margin-bottom: 12px;">
+                                    Questa nota non ha ancora una frase di supporto.
+                                </p>
+                                <form method="POST" action="{% url 'genera_frase_supporto_nota' nota.id %}" onsubmit="showGenerateSupportModal(event, this)">
+                                    {% csrf_token %}
+                                    <button type="submit" class="generate-support-btn">
+                                        <span>✨</span> Genera frase di supporto
+                                    </button>
+                                </form>
+                            </div>
                         {% endif %}
 
                         {% if nota.testo_medico or nota.testo_medico == "None" %}
@@ -129,7 +142,7 @@
         <div class="modal-content">
             <div class="note-icon">📝</div>
             <h2>Generazione nota in corso...</h2>
-            <p style="color: #475569; font-size: 15px;">Stiamo elaborando la tua nota e generando il supporto personalizzato</p>
+            <p style="color: #475569; font-size: 15px;">Stiamo elaborando la tua nota</p>
             <div class="loading-animation">
                 <div class="loading-dot"></div>
                 <div class="loading-dot"></div>
@@ -266,6 +279,21 @@
             document.getElementById('loadingModal').style.display = 'flex';
             // Permetti l'invio del form
             return true;
+        }
+
+        function showGenerateSupportModal(event, form) {
+            event.preventDefault();
+
+            // Ferma la registrazione vocale se attiva
+            if (isRecording) {
+                stopRecording();
+            }
+
+            // Mostra il modal di caricamento (stesso di quando si crea una nota)
+            document.getElementById('loadingModal').style.display = 'flex';
+
+            // Invia il form
+            form.submit();
         }
 
         function openDeleteModalFromButton(btn) {

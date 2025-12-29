@@ -330,6 +330,40 @@ textarea:focus {
     border-left: 3px solid #1565c0;
 }
 
+.generate-support-section {
+    background: rgba(25, 118, 210, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+    border-left: 3px solid #1976d2;
+}
+
+.generate-support-btn {
+    background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+}
+
+.generate-support-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+    background: linear-gradient(135deg, #0d47a1 0%, #0a3d91 100%);
+}
+
+.generate-support-btn span {
+    font-size: 16px;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px 20px;

@@ -404,6 +404,20 @@ textarea:focus {
     box-shadow: 0 0 0 4px rgba(25, 118, 210, .15);
 }
 
+.rigenerate-btn {
+    /*margin-top: 12px;*/
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+    color: #fff;
+    background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+    box-shadow: 0 6px 16px rgba(25, 118, 210, .3);
+}
+
 .save-btn {
     margin-top: 12px;
     padding: 12px 24px;
