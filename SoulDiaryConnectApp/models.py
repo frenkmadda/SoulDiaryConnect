@@ -64,3 +64,24 @@ class Messaggio(models.Model):
         verbose_name_plural = 'Messaggi'
 
 
+class RiassuntoCasoClinico(models.Model):
+    PERIODO_CHOICES = [
+        ('7days', 'Ultimi 7 giorni'),
+        ('30days', 'Ultimo mese'),
+        ('3months', 'Ultimi 3 mesi'),
+        ('year', 'Ultimo anno'),
+    ]
+    
+    id = models.AutoField(primary_key=True)
+    paz = models.ForeignKey(Paziente, on_delete=models.CASCADE)
+    med = models.ForeignKey(Medico, on_delete=models.CASCADE)
+    periodo = models.CharField(max_length=10, choices=PERIODO_CHOICES)
+    testo_riassunto = models.TextField()
+    data_generazione = models.DateTimeField()
+    
+    class Meta:
+        db_table = 'riassunto_caso_clinico'
+        verbose_name = 'Riassunto Caso Clinico'
+        verbose_name_plural = 'Riassunti Casi Clinici'
+
+
