@@ -104,9 +104,10 @@ body {
 }
 
 .form-group label {
+    color: #0d4071;
     display: block;
     font-weight: 600;
-    color: #374151;
+    /*color: #374151;*/
     margin-bottom: 8px;
     font-size: 14px;
 }
