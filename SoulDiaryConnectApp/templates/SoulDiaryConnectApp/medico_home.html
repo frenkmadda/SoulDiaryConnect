@@ -97,7 +97,16 @@
           {% if note_diario %}
             {% for nota in note_diario %}
               <div class="note-card">
-                <p><strong>📅 Data:</strong> {{ nota.data_nota|date:"d/m/Y" }}</p>
+                <div class="note-header">
+                  <p><strong>📅 Data:</strong> {{ nota.data_nota|date:"d/m/Y" }}</p>
+                  {% if nota.emozione_predominante %}
+                    <div class="emotion-box emotion-{{ nota.emotion_category }}">
+                      <span class="emotion-emoji">{{ nota.emoji }}</span>
+                      <span class="emotion-text">{{ nota.emozione_predominante|capfirst }}</span>
+                    </div>
+                  {% endif %}
+                </div>
+
                 <p><strong>📝 Nota del paziente:</strong> {{ nota.testo_paziente }}</p>
 
                 {% if nota.testo_supporto %}

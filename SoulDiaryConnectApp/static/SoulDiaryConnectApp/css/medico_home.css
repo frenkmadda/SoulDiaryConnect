@@ -199,6 +199,80 @@ body {
     padding: 24px;
     margin-bottom: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+    position: relative;
+}
+
+/* Header della nota con data e emotion box */
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.note-header p {
+    margin: 0;
+}
+
+/* Box Emozione Predominante - compatto in alto a destra */
+.emotion-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 8px;
+    padding: 5px 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Emozioni positive - Verde */
+.emotion-box.emotion-positive {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border: 1px solid #81c784;
+}
+
+.emotion-box.emotion-positive .emotion-text {
+    color: #2e7d32;
+}
+
+/* Emozioni negative - Rosso/Rosa */
+.emotion-box.emotion-negative {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border: 1px solid #e57373;
+}
+
+.emotion-box.emotion-negative .emotion-text {
+    color: #c62828;
+}
+
+/* Emozioni ansiose - Giallo/Ambra */
+.emotion-box.emotion-anxious {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border: 1px solid #ffd54f;
+}
+
+.emotion-box.emotion-anxious .emotion-text {
+    color: #f57f17;
+}
+
+/* Emozioni neutre - Lilla */
+.emotion-box.emotion-neutral {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    border: 1px solid #ba68c8;
+}
+
+.emotion-box.emotion-neutral .emotion-text {
+    color: #7b1fa2;
+}
+
+.emotion-emoji {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.emotion-text {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
 }
 
 .note-card p {

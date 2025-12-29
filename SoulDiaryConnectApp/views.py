@@ -218,6 +218,12 @@ def medico_home(request):
     # Note del paziente selezionato
     note_diario = NotaDiario.objects.filter(paz=paziente_selezionato).order_by('-data_nota') if paziente_selezionato else None
 
+    # Aggiungi le emoji alle note per il template
+    if note_diario:
+        for nota in note_diario:
+            nota.emoji = get_emoji_for_emotion(nota.emozione_predominante)
+            nota.emotion_category = get_emotion_category(nota.emozione_predominante)
+
     return render(request, 'SoulDiaryConnectApp/medico_home.html', {
         'medico': medico,
         'pazienti': pazienti,
@@ -252,6 +258,138 @@ Testo del paziente:
 Rispondi con una frase di supporto:"""
 
     return genera_con_ollama(prompt, max_chars=500, temperature=0.3)
+
+
+# Dizionario delle emozioni con le relative emoji
+EMOZIONI_EMOJI = {
+    'gioia': '😊',
+    'felicità': '😄',
+    'tristezza': '😢',
+    'rabbia': '😠',
+    'paura': '😨',
+    'ansia': '😰',
+    'sorpresa': '😲',
+    'disgusto': '🤢',
+    'vergogna': '😳',
+    'colpa': '😔',
+    'frustrazione': '😤',
+    'speranza': '🌟',
+    'gratitudine': '🙏',
+    'amore': '❤️',
+    'solitudine': '😞',
+    'confusione': '😕',
+    'stanchezza': '😩',
+    'serenità': '😌',
+    'nostalgia': '🥺',
+    'delusione': '😞',
+    'entusiasmo': '🤩',
+    'preoccupazione': '😟',
+    'calma': '😊',
+    'nervosismo': '😬',
+    'malinconia': '🥀',
+}
+
+# Categorie delle emozioni per colorazione
+EMOZIONI_CATEGORIE = {
+    # Emozioni positive (verde)
+    'gioia': 'positive',
+    'felicità': 'positive',
+    'speranza': 'positive',
+    'gratitudine': 'positive',
+    'amore': 'positive',
+    'serenità': 'positive',
+    'entusiasmo': 'positive',
+    'calma': 'positive',
+    # Emozioni negative (rosso)
+    'tristezza': 'negative',
+    'rabbia': 'negative',
+    'paura': 'negative',
+    'disgusto': 'negative',
+    'frustrazione': 'negative',
+    'solitudine': 'negative',
+    'delusione': 'negative',
+    'malinconia': 'negative',
+    # Emozioni ansiose (giallo/ambra)
+    'ansia': 'anxious',
+    'preoccupazione': 'anxious',
+    'nervosismo': 'anxious',
+    'stanchezza': 'anxious',
+    # Emozioni neutre (blu/grigio)
+    'sorpresa': 'neutral',
+    'vergogna': 'neutral',
+    'colpa': 'neutral',
+    'confusione': 'neutral',
+    'nostalgia': 'neutral',
+}
+
+
+def get_emotion_category(emozione):
+    """
+    Restituisce la categoria dell'emozione per la colorazione CSS.
+    """
+    if not emozione:
+        return 'neutral'
+    emozione_lower = emozione.lower().strip()
+    return EMOZIONI_CATEGORIE.get(emozione_lower, 'neutral')
+
+
+def analizza_sentiment(testo):
+    """
+    Analizza il sentiment del testo del paziente e restituisce l'emozione predominante con emoji.
+    """
+    print("Analisi sentiment con Ollama")
+
+    emozioni_lista = ', '.join(EMOZIONI_EMOJI.keys())
+    
+    prompt = f"""Sei un esperto di analisi delle emozioni. Il tuo compito è identificare l'emozione predominante in un testo.
+
+ISTRUZIONI:
+- Analizza attentamente il testo fornito
+- Identifica l'emozione principale espressa
+- Rispondi con UNA SOLA PAROLA: l'emozione predominante
+- Le emozioni possibili sono: {emozioni_lista}
+- Se non riesci a identificare un'emozione specifica, rispondi con l'emozione più vicina
+- Non aggiungere spiegazioni, punteggiatura o altro
+
+Esempi:
+Testo: "Oggi sono riuscito a superare l'esame, sono contentissimo!"
+Risposta: gioia
+
+Testo: "Mi sento solo e nessuno mi capisce"
+Risposta: solitudine
+
+Testo: "Non ce la faccio più, tutto va storto"
+Risposta: frustrazione
+
+Testo da analizzare:
+{testo}
+
+Emozione predominante:"""
+
+    risposta = genera_con_ollama(prompt, max_chars=50, temperature=0.1)
+    
+    # Normalizza la risposta: lowercase e rimuovi spazi
+    emozione = risposta.lower().strip().rstrip('.')
+    
+    # Cerca una corrispondenza nel dizionario
+    for chiave in EMOZIONI_EMOJI.keys():
+        if chiave in emozione:
+            return chiave
+    
+    # Se non trova corrispondenza, restituisci la risposta così com'è
+    # con un'emoji di default
+    return emozione if emozione else 'neutro'
+
+
+def get_emoji_for_emotion(emozione):
+    """
+    Restituisce l'emoji corrispondente all'emozione.
+    Se l'emozione non è nel dizionario, restituisce un'emoji di default.
+    """
+    if not emozione:
+        return '💭'
+    emozione_lower = emozione.lower().strip()
+    return EMOZIONI_EMOJI.get(emozione_lower, '💭')
 
 
 def _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars):
@@ -405,18 +543,21 @@ def paziente_home(request):
         generate_response_flag = request.POST.get('generateResponse') == 'on'
         testo_supporto = ""
         testo_clinico = ""
+        emozione_predominante = ""
 
         if testo_paziente:
             if generate_response_flag:
                 testo_supporto = genera_frasi_di_supporto(testo_paziente)
 
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico)
+            emozione_predominante = analizza_sentiment(testo_paziente)
 
             NotaDiario.objects.create(
                 paz=paziente,
                 testo_paziente=testo_paziente,
                 testo_supporto=testo_supporto,
                 testo_clinico=testo_clinico,
+                emozione_predominante=emozione_predominante,
                 data_nota=timezone.now()
             )
 
