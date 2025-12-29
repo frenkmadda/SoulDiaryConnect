@@ -1,0 +1,324 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisi Paziente - SoulDiaryConnect</title>
+    <link rel="stylesheet" href="{% static 'SoulDiaryConnectApp/css/analisi_paziente.css' %}">
+    <!-- Libreria Chart.js per i grafici -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="header">
+    <div class="header-left">
+        <img src="/media/2-01.png" alt="SoulDiaryConnect">
+        <h1>Analisi - {{ paziente.nome }} {{ paziente.cognome }}</h1>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'medico_home' %}?paziente_id={{ paziente.codice_fiscale }}" class="back-btn">
+            ← Torna alle Note
+        </a>
+        <a href="{% url 'logout' %}" class="logout-btn">
+            Logout <img src="/media/logout_white.png" alt="">
+        </a>
+    </div>
+</div>
+
+<div class="main-container">
+    <!-- SIDEBAR CON INFO PAZIENTE E STATISTICHE -->
+    <div class="sidebar">
+        <div class="patient-info-card">
+            <h2>📋 Informazioni Paziente</h2>
+            <div class="info-item">
+                <span class="info-label">Nome:</span>
+                <span class="info-value">{{ paziente.nome }} {{ paziente.cognome }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Codice Fiscale:</span>
+                <span class="info-value">{{ paziente.codice_fiscale }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Data di Nascita:</span>
+                <span class="info-value">{{ paziente.data_di_nascita|date:"d/m/Y" }}</span>
+            </div>
+        </div>
+
+        {% if statistiche %}
+            <div class="stats-card">
+                <h2>📊 Statistiche</h2>
+                <div class="stat-item">
+                    <span class="stat-icon">📝</span>
+                    <div class="stat-content">
+                        <span class="stat-label">Totale Note</span>
+                        <span class="stat-value">{{ statistiche.totale_note }}</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">📈</span>
+                    <div class="stat-content">
+                        <span class="stat-label">Media Emotiva</span>
+                        <span class="stat-value">{{ statistiche.media_emotiva }}/4</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">{{ statistiche.emozione_frequente_emoji }}</span>
+                    <div class="stat-content">
+                        <span class="stat-label">Emozione Più Frequente</span>
+                        <span class="stat-value">{{ statistiche.emozione_frequente|title }} ({{ statistiche.emozione_frequente_count }}x)</span>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- AREA ANALISI -->
+    <div class="analysis-area">
+        {% if emotion_chart_data %}
+            <!-- GRAFICO EMOZIONI -->
+            <div class="chart-section">
+                <!-- SEZIONE INSIGHTS -->
+                <div class="insights-grid">
+                    {% if statistiche %}
+                        {% if statistiche.media_emotiva >= 3.5 %}
+                            <div class="insight-card positive">
+                                <span class="insight-icon">✅</span>
+                                <div class="insight-content">
+                                    <h3>Stato Generale Positivo</h3>
+                                    <p>Il paziente mostra una tendenza emotiva prevalentemente positiva con una media di {{ statistiche.media_emotiva }}/4. Le emozioni predominanti sono nella categoria positive/neutre.</p>
+                                </div>
+                            </div>
+                        {% elif statistiche.media_emotiva >= 2.5 %}
+                            <div class="insight-card neutral">
+                                <span class="insight-icon">ℹ️</span>
+                                <div class="insight-content">
+                                    <h3>Stato Emotivo Equilibrato</h3>
+                                    <p>Il paziente presenta uno stato emotivo nel complesso equilibrato con una media di {{ statistiche.media_emotiva }}/4. Mix tra emozioni neutre e ansiose.</p>
+                                </div>
+                            </div>
+                        {% elif statistiche.media_emotiva >= 1.5 %}
+                            <div class="insight-card warning">
+                                <span class="insight-icon">⚠️</span>
+                                <div class="insight-content">
+                                    <h3>Attenzione Richiesta</h3>
+                                    <p>Il paziente mostra segni di difficoltà emotiva con una media di {{ statistiche.media_emotiva }}/4. Prevalenza di emozioni ansiose/negative. Monitorare attentamente.</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="insight-card alert">
+                                <span class="insight-icon">🚨</span>
+                                <div class="insight-content">
+                                    <h3>Stato Critico</h3>
+                                    <p>Il paziente presenta uno stato emotivo prevalentemente negativo con una media di {{ statistiche.media_emotiva }}/4. Intervento consigliato.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                <h2 style="margin-top: 20px;">📊 Andamento Emotivo nel Tempo</h2>
+                <p class="chart-description">
+                    Questo grafico mostra l'evoluzione dello stato emotivo del paziente nel tempo.
+                    Ogni punto rappresenta una nota con la relativa emozione predominante rilevata.
+                </p>
+
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+
+                <div class="emotion-legend">
+                    <h3>Legenda Valori Emotivi:</h3>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #4caf50;"></span>
+                            <span class="legend-text">
+                  <strong>4 - Emozioni Positive</strong>
+                  <br><small>Gioia, Felicità, Speranza, Gratitudine, Amore, Serenità, Entusiasmo, Calma, Orgoglio</small>
+                </span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #9c27b0;"></span>
+                            <span class="legend-text">
+                  <strong>3 - Emozioni Neutre</strong>
+                  <br><small>Sorpresa, Vergogna, Colpa, Confusione, Nostalgia, Inadeguatezza, Imbarazzo</small>
+                </span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #ffc107;"></span>
+                            <span class="legend-text">
+                  <strong>2 - Emozioni Ansiose</strong>
+                  <br><small>Ansia, Preoccupazione, Nervosismo, Stanchezza</small>
+                </span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #f44336;"></span>
+                            <span class="legend-text">
+                  <strong>1 - Emozioni Negative</strong>
+                  <br><small>Tristezza, Rabbia, Paura, Disgusto, Frustrazione, Solitudine, Delusione, Malinconia, Disperazione</small>
+                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <h2>Nessun Dato Disponibile</h2>
+                <p>Non ci sono ancora note sufficienti per generare analisi per questo paziente.</p>
+                <a href="{% url 'medico_home' %}?paziente_id={{ paziente.codice_fiscale }}" class="empty-action-btn">
+                    Torna alle Note
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    {% if emotion_chart_data %}
+        document.addEventListener('DOMContentLoaded', function() {
+            createEmotionChart();
+        });
+
+        function createEmotionChart() {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+
+            const dates = {{ emotion_chart_data.dates|safe }};
+            const emotions = {{ emotion_chart_data.emotions|safe }};
+            const values = {{ emotion_chart_data.values|safe }};
+
+            // Mappa i valori ai colori basati sulle categorie
+            const backgroundColors = values.map(value => {
+                if (value === 4) return 'rgba(76, 175, 80, 0.8)';      // Verde - Positive
+                if (value === 3) return 'rgba(156, 39, 176, 0.8)';     // Lilla - Neutral
+                if (value === 2) return 'rgba(255, 193, 7, 0.8)';      // Giallo - Anxious
+                return 'rgba(244, 67, 54, 0.8)';                        // Rosso - Negative
+            });
+
+            const borderColors = values.map(value => {
+                if (value === 4) return 'rgba(76, 175, 80, 1)';
+                if (value === 3) return 'rgba(156, 39, 176, 1)';
+                if (value === 2) return 'rgba(255, 193, 7, 1)';
+                return 'rgba(244, 67, 54, 1)';
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Stato Emotivo',
+                        data: values,
+                        backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                        borderColor: 'rgba(25, 118, 210, 1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: backgroundColors,
+                        pointBorderColor: borderColors,
+                        pointBorderWidth: 2,
+                        pointRadius: 8,
+                        pointHoverRadius: 12,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 20,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
+                            callbacks: {
+                                title: function(context) {
+                                    return 'Data: ' + context[0].label;
+                                },
+                                label: function(context) {
+                                    const emotion = emotions[context.dataIndex];
+                                    const value = context.parsed.y;
+                                    const categoryLabels = {
+                                        4: 'Positive',
+                                        3: 'Neutre',
+                                        2: 'Ansiose',
+                                        1: 'Negative'
+                                    };
+                                    return [
+                                        'Emozione: ' + emotion.charAt(0).toUpperCase() + emotion.slice(1),
+                                        'Categoria: ' + categoryLabels[value],
+                                        'Valore: ' + value + '/4'
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            suggestedMax: 2.0,
+                            ticks: {
+                                stepSize: 1,
+                                font: {
+                                    size: 12
+                                },
+                                callback: function(value) {
+                                    const labels = {
+                                        4: '😊 Positive',
+                                        3: '😐 Neutre',
+                                        2: '😰 Ansiose',
+                                        1: '😢 Negative',
+                                        0: ''
+                                    };
+                                    return labels[value] || '';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    {% endif %}
+</script>
+</body>
+</html>
+

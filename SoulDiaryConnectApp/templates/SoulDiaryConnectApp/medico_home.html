@@ -80,6 +80,10 @@
               <p><strong>Nome:</strong> {{ paziente_selezionato.nome }} {{ paziente_selezionato.cognome }}</p>
               <p><strong>Codice Fiscale:</strong> {{ paziente_selezionato.codice_fiscale }}</p>
               <p><strong>Data di Nascita:</strong> {{ paziente_selezionato.data_di_nascita|date:"d/m/Y" }}</p>
+
+              <a href="{% url 'analisi_paziente' %}?paziente_id={{ paziente_selezionato.codice_fiscale }}" class="analisi-btn">
+                📊 Analisi
+              </a>
             </div>
           {% endif %}
         {% endfor %}

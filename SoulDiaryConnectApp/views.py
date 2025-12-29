@@ -6,6 +6,7 @@ from django.utils import timezone
 import requests
 import logging
 import re
+import json
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
@@ -295,6 +296,10 @@ EMOZIONI_EMOJI = {
     'calma': '😊',
     'nervosismo': '😬',
     'malinconia': '🥀',
+    'inadeguatezza': '😔',
+    'disperazione': '😰',
+    'orgoglio': '😌',
+    'imbarazzo': '😳',
 }
 
 # Categorie delle emozioni per colorazione
@@ -308,6 +313,7 @@ EMOZIONI_CATEGORIE = {
     'serenità': 'positive',
     'entusiasmo': 'positive',
     'calma': 'positive',
+    'orgoglio': 'positive',
     # Emozioni negative (rosso)
     'tristezza': 'negative',
     'rabbia': 'negative',
@@ -317,17 +323,20 @@ EMOZIONI_CATEGORIE = {
     'solitudine': 'negative',
     'delusione': 'negative',
     'malinconia': 'negative',
+    'disperazione': 'negative',
     # Emozioni ansiose (giallo/ambra)
     'ansia': 'anxious',
     'preoccupazione': 'anxious',
     'nervosismo': 'anxious',
     'stanchezza': 'anxious',
-    # Emozioni neutre (blu/grigio)
+    # Emozioni neutre (lilla)
     'sorpresa': 'neutral',
     'vergogna': 'neutral',
     'colpa': 'neutral',
     'confusione': 'neutral',
     'nostalgia': 'neutral',
+    'inadeguatezza': 'neutral',
+    'imbarazzo': 'neutral',
 }
 
 
@@ -662,3 +671,100 @@ def rigenera_frase_clinica(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Richiesta non valida.'}, status=400)
+
+
+def analisi_paziente(request):
+    """
+    Pagina dedicata alle analisi del paziente selezionato
+    """
+    if request.session.get('user_type') != 'medico':
+        return redirect('/login/')
+
+    medico_id = request.session.get('user_id')
+    medico = get_object_or_404(Medico, codice_identificativo=medico_id)
+
+    # Paziente selezionato
+    paziente_id = request.GET.get('paziente_id')
+    if not paziente_id:
+        messages.error(request, 'Nessun paziente selezionato.')
+        return redirect('medico_home')
+
+    paziente_selezionato = get_object_or_404(Paziente, codice_fiscale=paziente_id)
+
+    # Verifica che il paziente sia del medico loggato
+    if paziente_selezionato.med != medico:
+        messages.error(request, 'Non hai i permessi per visualizzare questo paziente.')
+        return redirect('medico_home')
+
+    # Note del paziente
+    note_diario = NotaDiario.objects.filter(paz=paziente_selezionato).order_by('-data_nota')
+
+    # Prepara i dati per il grafico delle emozioni
+    emotion_chart_data = None
+    statistiche = None
+
+    if note_diario.exists():
+        # Ordina le note per data (dalla più vecchia alla più recente per il grafico)
+        note_ordinate = note_diario.order_by('data_nota')
+
+        # Prepara le liste per il grafico
+        dates = []
+        emotions = []
+        emotion_values = []
+
+        # Mappa le categorie a valori numerici per il grafico
+        # Usa le stesse categorie di EMOZIONI_CATEGORIE per coerenza
+        category_score_map = {
+            'positive': 4,   # Emozioni positive (verde)
+            'neutral': 3,    # Emozioni neutre (lilla)
+            'anxious': 2,    # Emozioni ansiose (giallo)
+            'negative': 1,   # Emozioni negative (rosso)
+        }
+
+        # Contatore per le statistiche
+        contatore_emozioni = {}
+        somma_valori = 0
+
+        for nota in note_ordinate:
+            if nota.emozione_predominante:
+                emozione_lower = nota.emozione_predominante.lower()
+                dates.append(nota.data_nota.strftime('%d/%m/%Y'))
+                emotions.append(emozione_lower)
+
+                # Ottieni la categoria dell'emozione e il valore corrispondente
+                categoria = get_emotion_category(emozione_lower)
+                score = category_score_map.get(categoria, 2)  # default: neutral
+                emotion_values.append(score)
+                somma_valori += score
+
+                # Conta le emozioni
+                contatore_emozioni[emozione_lower] = contatore_emozioni.get(emozione_lower, 0) + 1
+
+        if dates:
+            emotion_chart_data = {
+                'dates': json.dumps(dates),
+                'emotions': json.dumps(emotions),
+                'values': json.dumps(emotion_values),
+            }
+
+            # Calcola statistiche
+            media_emotiva = somma_valori / len(emotion_values) if emotion_values else 0
+            emozione_piu_frequente = max(contatore_emozioni.items(), key=lambda x: x[1]) if contatore_emozioni else (None, 0)
+
+            statistiche = {
+                'totale_note': note_diario.count(),
+                'media_emotiva': round(media_emotiva, 2),
+                'emozione_frequente': emozione_piu_frequente[0],
+                'emozione_frequente_count': emozione_piu_frequente[1],
+                'emozione_frequente_emoji': get_emoji_for_emotion(emozione_piu_frequente[0]),
+            }
+
+    return render(request, 'SoulDiaryConnectApp/analisi_paziente.html', {
+        'medico': medico,
+        'paziente': paziente_selezionato,
+        'emotion_chart_data': emotion_chart_data,
+        'statistiche': statistiche,
+        'note_diario': note_diario,
+    })
+
+

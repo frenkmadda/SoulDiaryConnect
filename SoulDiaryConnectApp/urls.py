@@ -9,6 +9,7 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),  # Registration page
     path('logout/', views.home, name='logout'),
     path('medico/home/', views.medico_home, name='medico_home'),
+    path('medico/analisi/', views.analisi_paziente, name='analisi_paziente'),
     path('paziente/home/', views.paziente_home, name='paziente_home'),
     path('medico/note/<int:nota_id>/modifica/', views.modifica_testo_medico, name='modifica_testo_medico'),
     path('medico/personalizza/', views.personalizza_generazione, name='personalizza_generazione'),

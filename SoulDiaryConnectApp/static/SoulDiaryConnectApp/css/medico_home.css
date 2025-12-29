@@ -170,6 +170,26 @@ body {
     color: #0d47a1
 }
 
+.analisi-btn {
+    display: block;
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.analisi-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+}
+
 .divider {
     height: 1px;
     background: #e2e8f0;
