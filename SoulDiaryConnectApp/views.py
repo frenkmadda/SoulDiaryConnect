@@ -80,6 +80,14 @@ def genera_con_ollama(prompt, max_chars=None, temperature=0.7):
             flags=re.I
         )
 
+        # Rimuove frasi introduttive tipiche delle note cliniche
+        text = re.sub(
+            r'^\s*(?:Ecco la (?:nota clinica|valutazione|analisi)[:\-\s]*|Di seguito[:\-\s]*|La valutazione è[:\-\s]*|Ecco l\'analisi[:\-\s]*|Nota clinica[:\-\s]*)+',
+            '',
+            text,
+            flags=re.I
+        )
+
         # Rimuove virgolette, apici, bullets o caratteri di maggiore iniziali
         text = re.sub(r'^[\'"«\s\-\u2022>]+', '', text).strip()
 
@@ -411,6 +419,8 @@ ISTRUZIONI IMPORTANTI:
 - Non usare markdown, elenchi puntati o simboli
 - Scrivi solo in italiano
 - Completa sempre la frase, non troncare mai a metà
+- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito" o simili
+- Inizia DIRETTAMENTE con il primo parametro
 
 Ora analizza questo testo:
 {testo}"""
@@ -436,6 +446,8 @@ ISTRUZIONI IMPORTANTI:
 - Non usare markdown, elenchi puntati o simboli
 - Scrivi solo in italiano
 - Completa sempre la frase, non troncare mai a metà
+- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito" o simili
+- Inizia DIRETTAMENTE con il primo parametro
 
 Ora analizza questo testo:
 {testo}"""
@@ -449,7 +461,8 @@ ISTRUZIONI IMPORTANTI:
 - La risposta deve essere BREVE e SINTETICA (massimo {max_chars} caratteri)
 - Scrivi in modo discorsivo, senza struttura a punti
 - Non usare elenchi, grassetti, markdown, simboli o titoli
-- Non usare frasi introduttive, inizia direttamente con la valutazione
+- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito", "La valutazione è" o simili
+- Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico
 - Scrivi solo in italiano
 - Completa sempre la frase, non troncare mai a metà
 
@@ -466,7 +479,8 @@ ISTRUZIONI IMPORTANTI:
 - Scrivi in modo discorsivo, senza struttura a punti
 - Approfondisci gli aspetti emotivi, cognitivi e comportamentali
 - Non usare elenchi, grassetti, markdown, simboli o titoli
-- Non usare frasi introduttive, inizia direttamente con la valutazione
+- NON usare frasi introduttive come "Ecco la nota clinica", "Ecco l'analisi", "Di seguito", "La valutazione è" o simili
+- Inizia DIRETTAMENTE con l'analisi del contenuto emotivo/psicologico
 - Scrivi solo in italiano
 - Completa sempre la frase, non troncare mai a metà
 
