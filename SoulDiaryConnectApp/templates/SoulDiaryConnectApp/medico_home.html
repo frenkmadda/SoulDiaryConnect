@@ -104,6 +104,9 @@
               <a href="{% url 'analisi_paziente' %}?paziente_id={{ paziente_selezionato.codice_fiscale }}" class="analisi-btn">
                 📊 Analisi
               </a>
+              <a href="{% url 'riassunto_caso_clinico' %}?paziente_id={{ paziente_selezionato.codice_fiscale }}" class="riassunto-btn">
+                📋 Riassunto caso clinico
+              </a>
             </div>
           {% endif %}
         {% endfor %}

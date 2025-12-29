@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Medico, Paziente, NotaDiario
+from .models import Medico, Paziente, NotaDiario, RiassuntoCasoClinico
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.utils import timezone
@@ -985,4 +985,137 @@ def analisi_paziente(request):
         'note_diario': note_diario,
     })
 
+
+def riassunto_caso_clinico(request):
+    """
+    View per generare un riassunto del caso clinico di un paziente
+    basato sulle note di un periodo selezionato.
+    """
+    if request.session.get('user_type') != 'medico':
+        return redirect('/login/')
+
+    medico_id = request.session.get('user_id')
+    medico = get_object_or_404(Medico, codice_identificativo=medico_id)
+
+    paziente_id = request.GET.get('paziente_id')
+    periodo = request.GET.get('periodo', '7days')  # Default: ultimi 7 giorni
+
+    if not paziente_id:
+        messages.error(request, 'Seleziona un paziente.')
+        return redirect('medico_home')
+
+    paziente_selezionato = get_object_or_404(Paziente, codice_fiscale=paziente_id)
+
+    # Verifica che il paziente sia del medico loggato
+    if paziente_selezionato.med != medico:
+        messages.error(request, 'Non hai i permessi per visualizzare questo paziente.')
+        return redirect('medico_home')
+
+    # Calcola la data di inizio in base al periodo selezionato
+    from datetime import timedelta
+    oggi = timezone.now()
+    
+    if periodo == '7days':
+        data_inizio = oggi - timedelta(days=7)
+        periodo_label = 'Ultimi 7 giorni'
+    elif periodo == '30days':
+        data_inizio = oggi - timedelta(days=30)
+        periodo_label = 'Ultimo mese'
+    elif periodo == '3months':
+        data_inizio = oggi - timedelta(days=90)
+        periodo_label = 'Ultimi 3 mesi'
+    elif periodo == 'year':
+        data_inizio = oggi - timedelta(days=365)
+        periodo_label = 'Ultimo anno'
+    else:
+        data_inizio = oggi - timedelta(days=7)
+        periodo_label = 'Ultimi 7 giorni'
+
+    # Recupera le note del periodo selezionato
+    note_periodo = NotaDiario.objects.filter(
+        paz=paziente_selezionato,
+        data_nota__gte=data_inizio
+    ).order_by('data_nota')
+
+    riassunto = None
+    data_generazione = None
+    
+    # Controlla se è stata richiesta una nuova generazione
+    if request.method == 'POST' or request.GET.get('genera') == '1':
+        if note_periodo.exists():
+            # Costruisci il contesto per il riassunto
+            note_testo = []
+            for nota in note_periodo:
+                nota_info = f"Data: {nota.data_nota.strftime('%d/%m/%Y')}"
+                if nota.emozione_predominante:
+                    nota_info += f" | Emozione: {nota.emozione_predominante}"
+                nota_info += f"\nNota paziente: {nota.testo_paziente}"
+                if nota.testo_clinico:
+                    nota_info += f"\nAnalisi clinica: {nota.testo_clinico}"
+                note_testo.append(nota_info)
+            
+            contesto_note = "\n\n---\n\n".join(note_testo)
+            
+            prompt = f"""Sei uno psicologo clinico esperto. Il tuo compito è generare un riassunto clinico professionale dello stato del paziente basandoti sulle note del diario raccolte nel periodo specificato.
+
+INFORMAZIONI PAZIENTE:
+Nome: {paziente_selezionato.nome} {paziente_selezionato.cognome}
+Periodo analizzato: {periodo_label}
+Numero di note: {note_periodo.count()}
+
+NOTE DEL DIARIO:
+{contesto_note}
+
+ISTRUZIONI:
+1. Fornisci un riassunto clinico strutturato che includa:
+   - Panoramica generale dello stato emotivo nel periodo
+   - Pattern emotivi ricorrenti identificati
+   - Eventuali miglioramenti o peggioramenti osservati
+   - Aree di attenzione o preoccupazione
+   - Raccomandazioni per il follow-up
+
+2. Usa un linguaggio professionale e clinico
+3. Sii obiettivo e basati solo sui dati forniti
+4. Evidenzia eventuali trend significativi
+
+Genera il riassunto clinico:"""
+
+            riassunto = genera_con_ollama(prompt, max_chars=2000, temperature=0.5)
+            data_generazione = timezone.now()
+            
+            # Salva o aggiorna il riassunto nel database
+            riassunto_obj, created = RiassuntoCasoClinico.objects.update_or_create(
+                paz=paziente_selezionato,
+                med=medico,
+                periodo=periodo,
+                defaults={
+                    'testo_riassunto': riassunto,
+                    'data_generazione': data_generazione,
+                }
+            )
+        else:
+            riassunto = "Non sono presenti note nel periodo selezionato."
+            data_generazione = timezone.now()
+    else:
+        # Cerca un riassunto esistente nel database
+        riassunto_esistente = RiassuntoCasoClinico.objects.filter(
+            paz=paziente_selezionato,
+            med=medico,
+            periodo=periodo
+        ).first()
+        
+        if riassunto_esistente:
+            riassunto = riassunto_esistente.testo_riassunto
+            data_generazione = riassunto_esistente.data_generazione
+
+    return render(request, 'SoulDiaryConnectApp/riassunto_caso_clinico.html', {
+        'medico': medico,
+        'paziente': paziente_selezionato,
+        'periodo': periodo,
+        'periodo_label': periodo_label,
+        'note_periodo': note_periodo,
+        'num_note': note_periodo.count(),
+        'riassunto': riassunto,
+        'data_generazione': data_generazione,
+    })
 
