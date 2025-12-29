@@ -232,16 +232,24 @@ def genera_frasi_di_supporto(testo):
     """
     print("Generazione frasi supporto con Ollama")
 
-    prompt = f"""
-        You are a supportive assistant. Use the following example to craft your response.
+    prompt = f"""Sei un assistente empatico e di supporto emotivo. Il tuo compito è rispondere con calore e comprensione a persone che stanno attraversando momenti difficili.
 
-        Example:
-        Text: "I failed my exam and feel like giving up."
-        Response: "I'm so sorry to hear about your exam. It's okay to feel disappointed, but this doesn't define your worth. Consider revising your study strategy and asking for help. You've got this!"
+Esempio:
+Testo del paziente: "Ho fallito il mio esame e ho voglia di arrendermi."
+Risposta di supporto: "Mi dispiace molto per il tuo esame. È normale sentirsi delusi, ma questo non definisce il tuo valore come persona. Potresti provare a rivedere il tuo metodo di studio e chiedere aiuto se ne hai bisogno. Ce la puoi fare!"
 
-        Now, respond to the following text in italian:
-        {testo}
-        """
+ISTRUZIONI:
+- Rispondi in italiano con tono caldo, empatico e incoraggiante
+- Riconosci e valida le emozioni espresse
+- Offri una prospettiva positiva senza minimizzare i sentimenti
+- Suggerisci delicatamente possibili strategie o riflessioni utili
+- Non usare un tono clinico o distaccato
+- Completa sempre la risposta, non troncare mai a metà
+
+Testo del paziente:
+{testo}
+
+Rispondi con una frase di supporto:"""
 
     return genera_con_ollama(prompt, max_chars=500, temperature=0.3)
 
