@@ -352,110 +352,114 @@ def get_emotion_category(emozione):
 
 def analizza_sentiment(testo):
     """
-    Analizza il sentiment del testo del paziente e restituisce l'emozione predominante con emoji.
+    Analizza il sentiment del testo del paziente e restituisce l'emozione predominante
+    con relativa spiegazione.
+
+    Returns:
+        tuple: (emozione, spiegazione)
     """
     print("Analisi sentiment con Ollama")
 
     emozioni_lista = ', '.join(EMOZIONI_EMOJI.keys())
     
-    prompt = f"""Sei un esperto di analisi delle emozioni. Il tuo compito è identificare l'emozione predominante in un testo scegliendo ESCLUSIVAMENTE tra le emozioni della lista fornita.
+    prompt = f"""Sei un esperto di analisi delle emozioni. Il tuo compito è identificare l'emozione predominante in un testo e spiegare perché.
 
 EMOZIONI DISPONIBILI (scegli SOLO tra queste):
 {emozioni_lista}
 
+FORMATO RISPOSTA (OBBLIGATORIO):
+Emozione: [una sola parola dalla lista]
+Spiegazione: [breve spiegazione di 1-2 frasi che cita elementi specifici del testo]
+
 REGOLE FONDAMENTALI:
-1. Devi rispondere con UNA SOLA PAROLA
-2. La parola DEVE essere ESATTAMENTE una di quelle nella lista sopra
-3. NON inventare nuove emozioni
-4. NON usare sinonimi o variazioni (es. "allegria" invece di "gioia")
-5. NON aggiungere spiegazioni, punteggiatura o altro testo
-6. Se il testo esprime più emozioni, scegli la PREDOMINANTE
-7. Se non sei sicuro, scegli l'emozione più simile dalla lista
+1. La prima riga DEVE iniziare con "Emozione:" seguita da UNA SOLA PAROLA dalla lista
+2. La seconda riga DEVE iniziare con "Spiegazione:" seguita dalla motivazione
+3. Nella spiegazione, cita parole o frasi SPECIFICHE del testo originale
+4. La spiegazione deve essere breve (max 2 frasi)
+5. NON inventare emozioni non presenti nella lista
 
 ESEMPI CORRETTI:
 Testo: "Oggi sono riuscito a superare l'esame, sono contentissimo e felice!"
-Risposta: felicità
+Emozione: felicità
+Spiegazione: Il testo esprime felicità attraverso termini positivi come "contentissimo" e "felice", inoltre il successo nell'esame indica un evento gratificante.
 
 Testo: "Mi sento solo e nessuno mi capisce, è terribile"
-Risposta: solitudine
+Emozione: solitudine
+Spiegazione: L'espressione "mi sento solo" e "nessuno mi capisce" indica chiaramente un vissuto di isolamento e mancanza di connessione con gli altri.
 
 Testo: "Non ce la faccio più, tutto va storto e sono stufo"
-Risposta: frustrazione
-
-Testo: "Sono preoccupato per il futuro, non so cosa mi aspetta"
-Risposta: preoccupazione
-
-Testo: "Mi vergogno di quello che ho fatto"
-Risposta: vergogna
-
-ESEMPI SBAGLIATI (NON FARE MAI COSÌ):
-❌ "contentezza" (non è nella lista, usa "gioia" o "felicità")
-❌ "allegria" (non è nella lista, usa "gioia" o "felicità")
-❌ "angoscia" (non è nella lista, usa "ansia" o "paura")
-❌ "tristezza." (NON aggiungere punteggiatura)
-❌ "L'emozione è rabbia" (risposta SOLO con la parola dell'emozione)
+Emozione: frustrazione
+Spiegazione: Le frasi "non ce la faccio più" e "tutto va storto" indicano un accumulo di difficoltà che genera un senso di impotenza e irritazione.
 
 Testo da analizzare:
 {testo}
 
-Emozione predominante (SCEGLI SOLO DALLA LISTA SOPRA):"""
+Rispondi ora nel formato richiesto:"""
 
-    risposta = genera_con_ollama(prompt, max_chars=50, temperature=0.1)
-    
-    # Normalizza la risposta: lowercase, rimuovi spazi e punteggiatura
-    emozione = risposta.lower().strip().rstrip('.!?,;:')
+    risposta = genera_con_ollama(prompt, max_chars=300, temperature=0.2)
 
-    # Primo tentativo: corrispondenza esatta
-    if emozione in EMOZIONI_EMOJI:
-        return emozione
+    # Parsing della risposta
+    linee = risposta.strip().split('\n')
+    emozione = None
+    spiegazione = None
 
-    # Secondo tentativo: cerca se la risposta contiene una delle emozioni valide
-    # (nel caso l'AI abbia aggiunto testo extra)
-    for chiave in EMOZIONI_EMOJI.keys():
-        if chiave in emozione:
-            return chiave
-    
-    # Terzo tentativo: fuzzy matching per sinonimi comuni
-    sinonimi = {
-        'contentezza': 'gioia',
-        'allegria': 'gioia',
-        'contento': 'gioia',
-        'felice': 'felicità',
-        'triste': 'tristezza',
-        'arrabbiato': 'rabbia',
-        'furioso': 'rabbia',
-        'spaventato': 'paura',
-        'impaurito': 'paura',
-        'ansioso': 'ansia',
-        'agitato': 'ansia',
-        'nervoso': 'nervosismo',
-        'stanco': 'stanchezza',
-        'affaticato': 'stanchezza',
-        'angoscia': 'ansia',
-        'angosciato': 'ansia',
-        'confuso': 'confusione',
-        'nostalgico': 'nostalgia',
-        'deluso': 'delusione',
-        'solo': 'solitudine',
-        'isolato': 'solitudine',
-        'frustrato': 'frustrazione',
-        'orgoglioso': 'orgoglio',
-        'imbarazzato': 'imbarazzo',
-        'inadeguato': 'inadeguatezza',
-        'disperato': 'disperazione',
-    }
+    for linea in linee:
+        linea_stripped = linea.strip()
+        if linea_stripped.lower().startswith('emozione:'):
+            emozione = linea_stripped.split(':', 1)[1].strip().lower().rstrip('.!?,;:')
+        elif linea_stripped.lower().startswith('spiegazione:'):
+            spiegazione = linea_stripped.split(':', 1)[1].strip()
 
-    if emozione in sinonimi:
-        return sinonimi[emozione]
+    # Validazione e normalizzazione dell'emozione
+    if emozione and emozione in EMOZIONI_EMOJI:
+        emozione_validata = emozione
+    else:
+        # Fallback con la logica esistente di fuzzy matching
+        emozione_validata = 'confusione'
+        for chiave in EMOZIONI_EMOJI.keys():
+            if emozione and chiave in emozione:
+                emozione_validata = chiave
+                break
 
-    # Se ancora non trova corrispondenza, prova a cercare parzialmente nei sinonimi
-    for sinonimo, emozione_corretta in sinonimi.items():
-        if sinonimo in emozione or emozione in sinonimo:
-            return emozione_corretta
+        # Controllo sinonimi
+        sinonimi = {
+            'contentezza': 'gioia',
+            'allegria': 'gioia',
+            'contento': 'gioia',
+            'felice': 'felicità',
+            'triste': 'tristezza',
+            'arrabbiato': 'rabbia',
+            'furioso': 'rabbia',
+            'spaventato': 'paura',
+            'impaurito': 'paura',
+            'ansioso': 'ansia',
+            'agitato': 'ansia',
+            'nervoso': 'nervosismo',
+            'stanco': 'stanchezza',
+            'affaticato': 'stanchezza',
+            'angoscia': 'ansia',
+            'angosciato': 'ansia',
+            'confuso': 'confusione',
+            'nostalgico': 'nostalgia',
+            'deluso': 'delusione',
+            'solo': 'solitudine',
+            'isolato': 'solitudine',
+            'frustrato': 'frustrazione',
+            'orgoglioso': 'orgoglio',
+            'imbarazzato': 'imbarazzo',
+            'inadeguato': 'inadeguatezza',
+            'disperato': 'disperazione',
+        }
 
-    # Ultimo fallback: restituisci confusione come emozione neutrale di default
-    print(f"ATTENZIONE: Emozione non riconosciuta '{emozione}', usando 'confusione' come default")
-    return 'confusione'
+        if emozione and emozione in sinonimi:
+            emozione_validata = sinonimi[emozione]
+
+    if not spiegazione:
+        spiegazione = "Emozione rilevata in base al contenuto generale del testo."
+
+    print(f"Emozione rilevata: {emozione_validata}, Spiegazione: {spiegazione}")
+
+    return emozione_validata, spiegazione
 
 
 def get_emoji_for_emotion(emozione):
@@ -758,13 +762,14 @@ def paziente_home(request):
         testo_supporto = ""
         testo_clinico = ""
         emozione_predominante = ""
+        spiegazione_emozione = ""
 
         if testo_paziente:
             if generate_response_flag:
                 testo_supporto = genera_frasi_di_supporto(testo_paziente)
 
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
-            emozione_predominante = analizza_sentiment(testo_paziente)
+            emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente)
 
             NotaDiario.objects.create(
                 paz=paziente,
@@ -772,6 +777,7 @@ def paziente_home(request):
                 testo_supporto=testo_supporto,
                 testo_clinico=testo_clinico,
                 emozione_predominante=emozione_predominante,
+                spiegazione_emozione=spiegazione_emozione,
                 data_nota=timezone.now()
             )
 

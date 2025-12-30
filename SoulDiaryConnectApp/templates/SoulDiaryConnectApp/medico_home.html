@@ -127,9 +127,19 @@
                 <div class="note-header">
                   <p><strong>📅 Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
                   {% if nota.emozione_predominante %}
-                    <div class="emotion-box emotion-{{ nota.emotion_category }}">
-                      <span class="emotion-emoji">{{ nota.emoji }}</span>
-                      <span class="emotion-text">{{ nota.emozione_predominante|capfirst }}</span>
+                    <div class="emotion-wrapper">
+                      <div class="emotion-box emotion-{{ nota.emotion_category }}">
+                        <span class="emotion-emoji">{{ nota.emoji }}</span>
+                        <span class="emotion-text">{{ nota.emozione_predominante|capfirst }}</span>
+                        {% if nota.spiegazione_emozione %}
+                          <span class="info-icon">i</span>
+                        {% endif %}
+                      </div>
+                      {% if nota.spiegazione_emozione %}
+                        <div class="custom-tooltip">
+                          {{ nota.spiegazione_emozione }}
+                        </div>
+                      {% endif %}
                     </div>
                   {% endif %}
                 </div>
