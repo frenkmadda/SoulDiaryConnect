@@ -3,11 +3,15 @@ from .models import Medico, Paziente, NotaDiario, RiassuntoCasoClinico
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.utils import timezone
+from django.http import JsonResponse
+from django.core.cache import cache
+from django.views.decorators.http import require_http_methods
 import requests
 import logging
 import re
 import json
-from django.http import JsonResponse
+import hashlib
+import difflib
 
 logger = logging.getLogger(__name__)
 
@@ -621,11 +625,12 @@ ISTRUZIONI FONDAMENTALI:
 
 REGOLE PER L'ANALISI:
 1. CONCENTRATI AL 80% SULLA NOTA CORRENTE - analizza in profondità il testo attuale
-2. Le note precedenti sono contesto di supporto - menzionale se aiutano a comprendere l'evoluzione
-3. Usa espressioni come "Si osserva un'evoluzione rispetto al pattern precedente", "Diversamente dalle situazioni passate"
+2. Le note precedenti sono SOLO contesto di supporto - NON descriverle una per una
+3. Puoi fare riferimenti come "Si osserva un'evoluzione rispetto al pattern precedente", "Diversamente dalle situazioni passate"
 4. Se menzioni una nota specifica, cita SEMPRE la data completa (es: "come emerso nella nota del 15/12/2025 alle ore 14:30")
 5. NON dedicare paragrafi interi a riassumere le note precedenti
 6. NON usare "La nota 1 descrive", "Nella nota 2", "La nota 3 rivela" senza date
+7. Puoi usare espressioni generiche come "nelle note precedenti", "in passato", "rispetto a situazioni simili"
 
 COSA FARE:
 ✓ Analizzare in profondità il contenuto emotivo della NOTA CORRENTE
@@ -780,6 +785,9 @@ def paziente_home(request):
                 spiegazione_emozione=spiegazione_emozione,
                 data_nota=timezone.now()
             )
+
+        # PRG Pattern: Redirect dopo POST per evitare duplicazione note al refresh
+        return redirect('paziente_home')
 
     note_diario = NotaDiario.objects.filter(paz=paziente).order_by('-data_nota')
 

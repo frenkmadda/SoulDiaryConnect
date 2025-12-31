@@ -41,8 +41,8 @@
                 <form method="POST" id="addNoteForm" onsubmit="showLoadingModal()">
                     {% csrf_token %}
                     <div class="textarea-container">
-                        <textarea name="desc" id="notaTextarea" placeholder="Scrivi qui i tuoi pensieri o usa la registrazione vocale..." rows="8" required></textarea>
-                        <button type="button" id="voiceBtn" class="voice-btn" onclick="toggleVoiceRecording()" title="Registrazione vocale">
+                        <textarea name="desc" id="notaTextarea" placeholder="Scrivi qui i tuoi pensieri o usa la dettatura vocale..." rows="8" required></textarea>
+                        <button type="button" id="voiceBtn" class="voice-btn" onclick="toggleVoiceRecording()" title="Dettatura vocale">
                             <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -53,7 +53,7 @@
                     </div>
                     <div id="recordingStatus" class="recording-status" style="display:none;">
                         <span class="recording-pulse"></span>
-                        <span class="recording-text">Sto ascoltando...</span>
+                        <span class="recording-text">🎤 Sto ascoltando...</span>
                     </div>
 
                     <div class="checkbox-group">
@@ -61,7 +61,7 @@
                         <label for="generateResponse">Genera automaticamente frasi di supporto</label>
                     </div>
 
-                    <button type="submit" class="submit-btn">Aggiungi Nota</button>
+                    <button type="submit" class="submit-btn">Salva Nota</button>
                 </form>
             </div>
         </div>
@@ -151,23 +151,34 @@
         </div>
     </div>
 
+    <!-- Modal di trascrizione non supportata -->
+    <div id="transcriptionLoadingModal" class="modal-overlay loading-modal" style="display:none;">
+        <div class="modal-content">
+            <div class="note-icon">⚠️</div>
+            <h2>Browser non supportato</h2>
+            <p style="color: #475569; font-size: 15px;">La dettatura vocale funziona solo su Chrome o Edge</p>
+        </div>
+    </div>
+
     <script>
-        // Variabili per la registrazione vocale
+        // ============================================================================
+        // TRASCRIZIONE VOCALE CON WEB SPEECH API
+        // ============================================================================
+
         let recognition = null;
         let isRecording = false;
 
-        // Inizializza il riconoscimento vocale
+        // Inizializza Web Speech API
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
-
                 recognition.continuous = true;
                 recognition.interimResults = true;
                 recognition.lang = 'it-IT';
 
                 recognition.onstart = function() {
-                    console.log('Registrazione avviata');
+                    console.log('Dettatura avviata');
                     isRecording = true;
                     updateRecordingUI(true);
                 };
@@ -189,48 +200,51 @@
 
                     // Se ci sono risultati finali, aggiungili al testo
                     if (finalTranscript) {
-                        // Rimuovi l'ultima trascrizione provvisoria e aggiungi quella finale
-                        const baseText = currentText.replace(/\[Ascoltando\.\.\.].*$/, '').trim();
+                        const baseText = currentText.replace(/\[...\].*$/, '').trim();
                         textarea.value = baseText + (baseText ? ' ' : '') + finalTranscript.trim();
                     } else if (interimTranscript) {
                         // Mostra la trascrizione provvisoria
-                        const baseText = currentText.replace(/\[Ascoltando\.\.\.].*$/, '').trim();
-                        textarea.value = baseText + (baseText ? ' ' : '') + '[Ascoltando...] ' + interimTranscript;
+                        const baseText = currentText.replace(/\[...\].*$/, '').trim();
+                        textarea.value = baseText + (baseText ? ' ' : '') + '[...] ' + interimTranscript;
                     }
                 };
 
                 recognition.onerror = function(event) {
-                    console.error('Errore nel riconoscimento vocale:', event.error);
-                    if (event.error === 'no-speech') {
-                        console.log('Nessun parlato rilevato');
-                    } else if (event.error === 'not-allowed') {
-                        alert('Permesso microfono negato. Per favore, abilita il microfono nelle impostazioni del browser.');
+                    console.error('Errore riconoscimento vocale:', event.error);
+                    if (event.error === 'not-allowed') {
+                        alert('Permesso microfono negato. Abilita il microfono nelle impostazioni del browser.');
                         isRecording = false;
                         updateRecordingUI(false);
                     }
                 };
 
                 recognition.onend = function() {
-                    console.log('Registrazione terminata');
                     if (isRecording) {
-                        // Riavvia se dovrebbe essere ancora in registrazione
-                        recognition.start();
+                        // Riavvia se deve continuare
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Recognition già attiva');
+                        }
                     } else {
                         updateRecordingUI(false);
-                        // Pulisci eventuali marcatori provvisori
+                        // Pulisci marcatori provvisori
                         const textarea = document.getElementById('notaTextarea');
-                        textarea.value = textarea.value.replace(/\[Ascoltando\.\.\.].\s*/g, '').trim();
+                        textarea.value = textarea.value.replace(/\[...\].*$/, '').trim();
                     }
                 };
-            } else {
-                console.error('API di riconoscimento vocale non supportata');
-                alert('Il riconoscimento vocale non è supportato dal tuo browser. Prova ad usare Chrome o Edge.');
+
+                return true;
             }
+            return false;
         }
 
         function toggleVoiceRecording() {
             if (!recognition) {
-                initSpeechRecognition();
+                if (!initSpeechRecognition()) {
+                    alert('La dettatura vocale non è supportata dal tuo browser. Usa Chrome o Edge.');
+                    return;
+                }
             }
 
             if (isRecording) {
@@ -245,7 +259,7 @@
                 try {
                     recognition.start();
                 } catch (e) {
-                    console.error('Errore avvio registrazione:', e);
+                    console.error('Errore avvio:', e);
                 }
             }
         }
@@ -255,6 +269,11 @@
             if (recognition) {
                 recognition.stop();
             }
+            updateRecordingUI(false);
+
+            // Pulisci marcatori provvisori
+            const textarea = document.getElementById('notaTextarea');
+            textarea.value = textarea.value.replace(/\[...\].*$/, '').trim();
         }
 
         function updateRecordingUI(recording) {
@@ -270,29 +289,24 @@
             }
         }
 
+        // ============================================================================
+        // FUNZIONI ESISTENTI
+        // ============================================================================
+
         function showLoadingModal() {
-            // Ferma la registrazione se attiva
             if (isRecording) {
                 stopRecording();
             }
-            // Mostra il modal di caricamento
             document.getElementById('loadingModal').style.display = 'flex';
-            // Permetti l'invio del form
             return true;
         }
 
         function showGenerateSupportModal(event, form) {
             event.preventDefault();
-
-            // Ferma la registrazione vocale se attiva
             if (isRecording) {
                 stopRecording();
             }
-
-            // Mostra il modal di caricamento (stesso di quando si crea una nota)
             document.getElementById('loadingModal').style.display = 'flex';
-
-            // Invia il form
             form.submit();
         }
 
@@ -302,6 +316,7 @@
             var testoNota = btn.getAttribute('data-nota');
             openDeleteModal(notaId, dataNota, testoNota);
         }
+
         function openDeleteModal(notaId, dataNota, testoNota) {
             document.getElementById('modalData').innerHTML = '<strong>Data:</strong> ' + dataNota;
             document.getElementById('modalNota').innerHTML = '<strong>Nota:</strong> ' + testoNota;
@@ -309,6 +324,7 @@
             form.action = '/paziente/note/' + notaId + '/elimina/';
             document.getElementById('deleteModal').style.display = 'flex';
         }
+
         function closeDeleteModal() {
             document.getElementById('deleteModal').style.display = 'none';
         }

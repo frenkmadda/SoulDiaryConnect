@@ -57,38 +57,38 @@
             <div class="settings-card">
                 <div class="settings-grid">
                     <div class="setting-section">
-                        <h2>Tipo di Nota</h2>
+                        <h2>Tipo di analisi clinica</h2>
 
                         <div class="radio-group">
                             <label class="radio-option">
                                 <input type="radio" name="tipo_nota" value="strutturato" id="strutturato"
                                     {% if medico.tipo_nota %}checked{% endif %} onchange="toggleParametriTable()">
-                                <span>Commento Strutturato</span>
+                                <span>Analisi Strutturata</span>
                             </label>
 
                             <label class="radio-option">
                                 <input type="radio" name="tipo_nota" value="non_strutturato" id="non_strutturato"
                                     {% if medico.tipo_nota is not None and not medico.tipo_nota %}checked{% endif %}
                                     onchange="toggleParametriTable()">
-                                <span>Commento Non Strutturato</span>
+                                <span>Analisi Non Strutturata</span>
                             </label>
                         </div>
                     </div>
 
                     <div class="setting-section">
-                        <h2>Lunghezza della Nota</h2>
+                        <h2>Lunghezza dell'analisi clinica</h2>
 
                         <div class="radio-group">
                             <label class="radio-option">
                                 <input type="radio" name="lunghezza_nota" value="lungo" id="lungo"
                                     {% if medico.lunghezza_nota %}checked{% endif %}>
-                                <span>Commento Lungo</span>
+                                <span>Analisi Lunga</span>
                             </label>
 
                             <label class="radio-option">
                                 <input type="radio" name="lunghezza_nota" value="breve" id="breve"
                                     {% if medico.lunghezza_nota is not None and not medico.lunghezza_nota %}checked{% endif %}>
-                                <span>Commento Breve</span>
+                                <span>Analisi Breve</span>
                             </label>
                         </div>
                     </div>
