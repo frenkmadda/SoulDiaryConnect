@@ -236,6 +236,7 @@ def medico_home(request):
         for nota in note_diario:
             nota.emoji = get_emoji_for_emotion(nota.emozione_predominante)
             nota.emotion_category = get_emotion_category(nota.emozione_predominante)
+            nota.context_emoji = get_emoji_for_context(nota.contesto_sociale)
 
     return render(request, 'SoulDiaryConnectApp/medico_home.html', {
         'medico': medico,
@@ -245,15 +246,31 @@ def medico_home(request):
     })
 
 
-def genera_frasi_di_supporto(testo):
+def genera_frasi_di_supporto(testo, paziente=None):
     """
     Genera frasi di supporto empatico per il paziente usando Ollama
+
+    Args:
+        testo: Il testo della nota del paziente
+        paziente: L'oggetto Paziente (opzionale, per evitare confusione con altri nomi nel testo)
     """
     print("Generazione frasi supporto con Ollama")
 
+    # Costruisco il contesto sul paziente se disponibile
+    contesto_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        contesto_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON all'autore.
+Quando rispondi, rivolgiti direttamente a {paziente.nome} (o usa "tu" senza nominarlo).
+
+"""
+
     prompt = f"""Sei un assistente empatico e di supporto emotivo. Il tuo compito è rispondere con calore e comprensione a persone che stanno attraversando momenti difficili.
 
-Esempio:
+{contesto_paziente}Esempio:
 Testo del paziente: "Ho fallito il mio esame e ho voglia di arrendermi."
 Risposta di supporto: "Mi dispiace molto per il tuo esame. È normale sentirsi delusi, ma questo non definisce il tuo valore come persona. Potresti provare a rivedere il tuo metodo di studio e chiedere aiuto se ne hai bisogno. Ce la puoi fare!"
 
@@ -264,6 +281,7 @@ ISTRUZIONI:
 - Suggerisci delicatamente possibili strategie o riflessioni utili
 - Non usare un tono clinico o distaccato
 - Completa sempre la risposta, non troncare mai a metà
+- NON confondere l'autore del testo con altre persone menzionate nella nota
 
 Testo del paziente:
 {testo}
@@ -343,6 +361,31 @@ EMOZIONI_CATEGORIE = {
     'imbarazzo': 'neutral',
 }
 
+# Dizionario dei contesti sociali con le relative emoji
+CONTESTI_EMOJI = {
+    'lavoro': '💼',
+    'università': '🎓',
+    'scuola': '📚',
+    'famiglia': '👨‍👩‍👧‍👦',
+    'amicizia': '👥',
+    'relazione': '💑',
+    'salute': '🏥',
+    'sport': '🏋️',
+    'palestra': '💪',
+    'tempo libero': '🎮',
+    'hobby': '🎨',
+    'viaggi': '✈️',
+    'casa': '🏠',
+    'finanze': '💰',
+    'spiritualità': '🧘',
+    'sociale': '🌐',
+    'solitudine': '🚶',
+    'studio': '📖',
+    'alimentazione': '🍽️',
+    'sonno': '😴',
+    'altro': '📝',
+}
+
 
 def get_emotion_category(emozione):
     """
@@ -354,10 +397,235 @@ def get_emotion_category(emozione):
     return EMOZIONI_CATEGORIE.get(emozione_lower, 'neutral')
 
 
-def analizza_sentiment(testo):
+def get_emoji_for_context(contesto):
+    """
+    Restituisce l'emoji corrispondente al contesto sociale.
+    Se il contesto non è nel dizionario, restituisce un'emoji di default.
+    """
+    if not contesto:
+        return '📝'
+    contesto_lower = contesto.lower().strip()
+    return CONTESTI_EMOJI.get(contesto_lower, '📝')
+
+
+def analizza_contesto_sociale(testo, paziente=None):
+    """
+    Analizza il contesto sociale del testo del paziente e restituisce il contesto principale
+    con relativa spiegazione.
+
+    Args:
+        testo: Il testo della nota del paziente
+        paziente: L'oggetto Paziente (opzionale, per evitare confusione con altri nomi nel testo)
+
+    Returns:
+        tuple: (contesto, spiegazione)
+    """
+    print("Analisi contesto sociale con Ollama")
+
+    contesti_lista = ', '.join(CONTESTI_EMOJI.keys())
+
+    # Costruisco il contesto sul paziente se disponibile
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON all'autore.
+Identifica il contesto sociale in cui si trova {nome_completo}, l'autore del testo.
+
+"""
+
+    prompt = f"""Sei un esperto di analisi del contesto sociale. Il tuo compito è identificare il contesto sociale principale in cui si svolge il racconto di un paziente e spiegare perché.
+
+{info_paziente}CONTESTI DISPONIBILI (scegli SOLO tra questi):
+{contesti_lista}
+
+FORMATO RISPOSTA (OBBLIGATORIO):
+Contesto: [una sola parola o due parole dalla lista]
+Spiegazione: [breve spiegazione di 1-2 frasi che cita elementi specifici del testo]
+
+REGOLE FONDAMENTALI:
+1. La prima riga DEVE iniziare con "Contesto:" seguita da UNA o DUE PAROLE dalla lista
+2. La seconda riga DEVE iniziare con "Spiegazione:" seguita dalla motivazione
+3. Nella spiegazione, cita parole o frasi SPECIFICHE del testo originale
+4. La spiegazione deve essere breve (max 2 frasi)
+5. NON inventare contesti non presenti nella lista
+6. Se il testo non indica chiaramente un contesto, usa "altro"
+
+REGOLE SPECIFICHE IMPORTANTI:
+- L'attività fisica (palestra, allenamento, corsa, nuoto, calcio, fitness, yoga, esercizi, pesi, cardio, crossfit, ecc.) va SEMPRE classificata come "palestra" o "sport", MAI come "tempo libero"
+- "tempo libero" si usa solo per attività ricreative NON sportive come: videogiochi, TV, cinema, lettura, uscite con amici per svago, shopping, ecc.
+
+COME DISTINGUERE I CONTESTI RELAZIONALI (MOLTO IMPORTANTE):
+- "famiglia": usa SOLO se il testo menziona ESPLICITAMENTE familiari (madre, padre, fratello, sorella, figlio, figlia, marito, moglie, nonno, nonna, zio, zia, cugino, ecc.)
+- "relazione": usa quando il testo parla di partner sentimentale/romantico (fidanzato/a, compagno/a, relazione amorosa, baci, intimità, sentimenti romantici, paura di investire in una relazione, gelosia sentimentale)
+- "amicizia": usa per amici, compagni, conoscenti (senza connotazione romantica)
+- Se una persona viene descritta con dinamiche romantiche/sentimentali (es. "investire su qualcuno", "gelosia", "amore", gesti affettuosi romantici) = "relazione"
+- NON assumere che qualcuno sia un familiare solo perché è una persona cara
+
+ESEMPI CORRETTI:
+Testo: "Oggi al lavoro il mio capo mi ha criticato davanti a tutti i colleghi"
+Contesto: lavoro
+Spiegazione: Il testo si svolge chiaramente in ambito lavorativo, con riferimenti espliciti al "lavoro", al "capo" e ai "colleghi".
+
+Testo: "Ho litigato con mia madre perché non capisce le mie scelte"
+Contesto: famiglia
+Spiegazione: Il testo descrive una dinamica familiare, con riferimento esplicito a "mia madre" e a un conflitto intergenerazionale.
+
+Testo: "Ho passato la serata con Marco e abbiamo giocato alla PlayStation"
+Contesto: amicizia
+Spiegazione: Il testo descrive un momento di svago con un amico, senza connotazioni romantiche o familiari.
+
+Testo: "Ieri sera io e Laura ci siamo baciati per la prima volta, il mio cuore batteva fortissimo"
+Contesto: relazione
+Spiegazione: Il testo descrive chiaramente un momento romantico e sentimentale con "bacio" e riferimenti a sentimenti d'amore.
+
+Testo: "Sono andato in palestra e mi sono allenato duramente"
+Contesto: palestra
+Spiegazione: Il testo menziona esplicitamente la "palestra" e l'allenamento fisico.
+
+Testo: "Oggi ho fatto una bella corsa al parco e poi esercizi a casa"
+Contesto: sport
+Spiegazione: Il testo descrive attività fisica come "corsa" ed "esercizi", che rientrano nel contesto sportivo.
+
+Testo da analizzare:
+{testo}
+
+Rispondi ora nel formato richiesto:"""
+
+    risposta = genera_con_ollama(prompt, max_chars=400, temperature=0.2)
+
+    print(f"Risposta contesto sociale raw: {risposta}")
+
+    # Parsing della risposta
+    linee = risposta.strip().split('\n')
+    contesto = None
+    spiegazione = None
+
+    for linea in linee:
+        linea_stripped = linea.strip()
+        if linea_stripped.lower().startswith('contesto:'):
+            contesto = linea_stripped.split(':', 1)[1].strip().lower().rstrip('.!?,;:')
+        elif linea_stripped.lower().startswith('spiegazione:'):
+            spiegazione = linea_stripped.split(':', 1)[1].strip()
+
+    print(f"Contesto parsed: {contesto}, Spiegazione parsed: {spiegazione}")
+
+    # Validazione e normalizzazione del contesto
+    if contesto and contesto in CONTESTI_EMOJI:
+        contesto_validato = contesto
+    else:
+        # Fallback con fuzzy matching
+        contesto_validato = 'altro'
+        for chiave in CONTESTI_EMOJI.keys():
+            if contesto and chiave in contesto:
+                contesto_validato = chiave
+                break
+
+        # Controllo sinonimi
+        sinonimi = {
+            'ufficio': 'lavoro',
+            'azienda': 'lavoro',
+            'professione': 'lavoro',
+            'carriera': 'lavoro',
+            'college': 'università',
+            'ateneo': 'università',
+            'liceo': 'scuola',
+            'elementare': 'scuola',
+            'media': 'scuola',
+            'genitori': 'famiglia',
+            'fratelli': 'famiglia',
+            'parenti': 'famiglia',
+            'figli': 'famiglia',
+            'madre': 'famiglia',
+            'padre': 'famiglia',
+            'mamma': 'famiglia',
+            'papà': 'famiglia',
+            'sorella': 'famiglia',
+            'fratello': 'famiglia',
+            'amici': 'amicizia',
+            'compagni': 'amicizia',
+            'amico': 'amicizia',
+            'amica': 'amicizia',
+            'partner': 'relazione',
+            'fidanzato': 'relazione',
+            'fidanzata': 'relazione',
+            'marito': 'relazione',
+            'moglie': 'relazione',
+            'compagno': 'relazione',
+            'compagna': 'relazione',
+            'ragazzo': 'relazione',
+            'ragazza': 'relazione',
+            'sentimentale': 'relazione',
+            'romantico': 'relazione',
+            'romantica': 'relazione',
+            'coppia': 'relazione',
+            'amore': 'relazione',
+            'innamorato': 'relazione',
+            'innamorata': 'relazione',
+            'medico': 'salute',
+            'ospedale': 'salute',
+            'malattia': 'salute',
+            'allenamento': 'palestra',
+            'allenarsi': 'palestra',
+            'corsa': 'sport',
+            'correre': 'sport',
+            'nuoto': 'sport',
+            'nuotare': 'sport',
+            'calcio': 'sport',
+            'tennis': 'sport',
+            'basket': 'sport',
+            'pallavolo': 'sport',
+            'ciclismo': 'sport',
+            'bicicletta': 'sport',
+            'fitness': 'palestra',
+            'pesi': 'palestra',
+            'cardio': 'palestra',
+            'crossfit': 'palestra',
+            'yoga': 'palestra',
+            'pilates': 'palestra',
+            'esercizi': 'palestra',
+            'esercizio': 'palestra',
+            'attività fisica': 'sport',
+            'ginnastica': 'palestra',
+            'svago': 'tempo libero',
+            'divertimento': 'tempo libero',
+            'passatempo': 'hobby',
+            'vacanza': 'viaggi',
+            'viaggio': 'viaggi',
+            'appartamento': 'casa',
+            'soldi': 'finanze',
+            'economia': 'finanze',
+            'meditazione': 'spiritualità',
+            'religione': 'spiritualità',
+            'esame': 'studio',
+            'compiti': 'studio',
+            'cibo': 'alimentazione',
+            'dieta': 'alimentazione',
+            'dormire': 'sonno',
+            'insonnia': 'sonno',
+        }
+
+        if contesto and contesto in sinonimi:
+            contesto_validato = sinonimi[contesto]
+
+    if not spiegazione:
+        spiegazione = "Contesto rilevato in base al contenuto generale del testo."
+
+    print(f"Contesto rilevato: {contesto_validato}, Spiegazione: {spiegazione}")
+
+    return contesto_validato, spiegazione
+
+
+def analizza_sentiment(testo, paziente=None):
     """
     Analizza il sentiment del testo del paziente e restituisce l'emozione predominante
     con relativa spiegazione.
+
+    Args:
+        testo: Il testo della nota del paziente
+        paziente: L'oggetto Paziente (opzionale, per evitare confusione con altri nomi nel testo)
 
     Returns:
         tuple: (emozione, spiegazione)
@@ -366,9 +634,21 @@ def analizza_sentiment(testo):
 
     emozioni_lista = ', '.join(EMOZIONI_EMOJI.keys())
     
+    # Costruisco il contesto sul paziente se disponibile
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON all'autore.
+Analizza le emozioni di {nome_completo}, l'autore del testo.
+
+"""
+
     prompt = f"""Sei un esperto di analisi delle emozioni. Il tuo compito è identificare l'emozione predominante in un testo e spiegare perché.
 
-EMOZIONI DISPONIBILI (scegli SOLO tra queste):
+{info_paziente}EMOZIONI DISPONIBILI (scegli SOLO tra queste):
 {emozioni_lista}
 
 FORMATO RISPOSTA (OBBLIGATORIO):
@@ -477,11 +757,20 @@ def get_emoji_for_emotion(emozione):
     return EMOZIONI_EMOJI.get(emozione_lower, '💭')
 
 
-def _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente):
+def _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente, paziente=None):
     """Prompt per nota strutturata breve"""
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON al paziente.
+
+"""
     return f"""Sei un assistente per uno psicoterapeuta. Analizza il seguente testo e fornisci una valutazione clinica strutturata e CONCISA.
 
-CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{info_paziente}CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
 {contesto_precedente}
 
 Esempio:
@@ -523,11 +812,20 @@ Ora analizza questo testo (FOCALIZZATI SU QUESTO):
 {testo}"""
 
 
-def _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente):
+def _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente, paziente=None):
     """Prompt per nota strutturata lunga"""
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON al paziente.
+
+"""
     return f"""Sei un assistente per uno psicoterapeuta. Analizza il seguente testo e fornisci una valutazione clinica strutturata e DETTAGLIATA.
 
-CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{info_paziente}CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
 {contesto_precedente}
 
 Esempio:
@@ -572,11 +870,20 @@ Ora analizza questo testo in profondità (QUESTO È IL FOCUS PRINCIPALE):
 {testo}"""
 
 
-def _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente):
+def _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente, paziente=None):
     """Prompt per nota non strutturata breve"""
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON al paziente.
+
+"""
     return f"""Sei un assistente di uno psicoterapeuta specializzato. Analizza il seguente testo e fornisci una valutazione clinica discorsiva BREVE.
 
-CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{info_paziente}CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
 {contesto_precedente}
 
 ISTRUZIONI FONDAMENTALI:
@@ -610,11 +917,20 @@ Testo da analizzare (QUESTO È IL FOCUS):
 {testo}"""
 
 
-def _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente):
+def _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente, paziente=None):
     """Prompt per nota non strutturata lunga"""
+    info_paziente = ""
+    if paziente:
+        nome_completo = f"{paziente.nome} {paziente.cognome}"
+        info_paziente = f"""INFORMAZIONE IMPORTANTE SULL'AUTORE:
+L'autore di questo testo è {nome_completo}.
+Questo testo è scritto in prima persona da {nome_completo}.
+Qualsiasi altro nome menzionato (anche se uguale a "{paziente.nome}") si riferisce ad altre persone (amici, familiari, colleghi, ecc.), NON al paziente.
+
+"""
     return f"""Sei un assistente di uno psicoterapeuta specializzato. Analizza il seguente testo e fornisci una valutazione clinica discorsiva DETTAGLIATA e APPROFONDITA.
 
-CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
+{info_paziente}CONTESTO - Note precedenti del paziente (SOLO per riferimento, NON descrivere ogni nota):
 {contesto_precedente}
 
 ISTRUZIONI FONDAMENTALI:
@@ -725,18 +1041,18 @@ def genera_frasi_cliniche(testo, medico, paziente, nota_id=None):
             )
             if lunghezza_nota:
                 # Strutturata + Lunga
-                prompt = _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente)
+                prompt = _genera_prompt_strutturato_lungo(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente, paziente)
             else:
                 # Strutturata + Breve
-                prompt = _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente)
+                prompt = _genera_prompt_strutturato_breve(testo, parametri_strutturati, tipo_parametri, max_chars, contesto_precedente, paziente)
         else:
             # Nota non strutturata
             if lunghezza_nota:
                 # Non Strutturata + Lunga
-                prompt = _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente)
+                prompt = _genera_prompt_non_strutturato_lungo(testo, max_chars, contesto_precedente, paziente)
             else:
                 # Non Strutturata + Breve
-                prompt = _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente)
+                prompt = _genera_prompt_non_strutturato_breve(testo, max_chars, contesto_precedente, paziente)
 
         return genera_con_ollama(prompt, max_chars=max_chars, temperature=0.6)
 
@@ -768,13 +1084,16 @@ def paziente_home(request):
         testo_clinico = ""
         emozione_predominante = ""
         spiegazione_emozione = ""
+        contesto_sociale = ""
+        spiegazione_contesto = ""
 
         if testo_paziente:
             if generate_response_flag:
-                testo_supporto = genera_frasi_di_supporto(testo_paziente)
+                testo_supporto = genera_frasi_di_supporto(testo_paziente, paziente)
 
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
-            emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente)
+            emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente, paziente)
+            contesto_sociale, spiegazione_contesto = analizza_contesto_sociale(testo_paziente, paziente)
 
             NotaDiario.objects.create(
                 paz=paziente,
@@ -783,6 +1102,8 @@ def paziente_home(request):
                 testo_clinico=testo_clinico,
                 emozione_predominante=emozione_predominante,
                 spiegazione_emozione=spiegazione_emozione,
+                contesto_sociale=contesto_sociale,
+                spiegazione_contesto=spiegazione_contesto,
                 data_nota=timezone.now()
             )
 
@@ -896,7 +1217,7 @@ def genera_frase_supporto_nota(request, nota_id):
     if request.method == 'POST':
         # Genera la frase di supporto se non esiste già
         if not nota.testo_supporto or nota.testo_supporto.strip() == '':
-            testo_supporto = genera_frasi_di_supporto(nota.testo_paziente)
+            testo_supporto = genera_frasi_di_supporto(nota.testo_paziente, nota.paz)
             nota.testo_supporto = testo_supporto
             nota.save(update_fields=["testo_supporto"])
 
