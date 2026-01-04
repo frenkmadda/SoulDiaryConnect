@@ -69,6 +69,41 @@
                     </div>
                 </div>
             </div>
+
+            <!-- LEGENDA EMOZIONI NELLA SIDEBAR -->
+            <div class="emotion-legend-card">
+                <h2>🎨 Legenda Emozioni</h2>
+                <div class="legend-items-sidebar">
+                    <div class="legend-item-sidebar">
+                        <div class="legend-color-sidebar color-positive"></div>
+                        <div class="legend-text-sidebar">
+                            <strong>4 - Positive</strong>
+                            <small>Gioia, Felicità, Speranza, Gratitudine, Amore, Serenità, Entusiasmo, Calma, Orgoglio</small>
+                        </div>
+                    </div>
+                    <div class="legend-item-sidebar">
+                        <div class="legend-color-sidebar color-neutral"></div>
+                        <div class="legend-text-sidebar">
+                            <strong>3 - Neutre</strong>
+                            <small>Sorpresa, Vergogna, Colpa, Confusione, Nostalgia, Inadeguatezza, Imbarazzo</small>
+                        </div>
+                    </div>
+                    <div class="legend-item-sidebar">
+                        <div class="legend-color-sidebar color-anxious"></div>
+                        <div class="legend-text-sidebar">
+                            <strong>2 - Ansiose</strong>
+                            <small>Ansia, Preoccupazione, Nervosismo, Stanchezza</small>
+                        </div>
+                    </div>
+                    <div class="legend-item-sidebar">
+                        <div class="legend-color-sidebar color-negative"></div>
+                        <div class="legend-text-sidebar">
+                            <strong>1 - Negative</strong>
+                            <small>Tristezza, Rabbia, Paura, Disgusto, Frustrazione, Solitudine, Delusione, Malinconia, Disperazione</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
 
@@ -130,43 +165,49 @@
                 <div class="chart-container">
                     <canvas id="emotionChart"></canvas>
                 </div>
+            </div>
 
-                <div class="emotion-legend">
-                    <h3>Legenda Valori Emotivi:</h3>
-                    <div class="legend-items">
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #4caf50;"></span>
-                            <span class="legend-text">
-                  <strong>4 - Emozioni Positive</strong>
-                  <br><small>Gioia, Felicità, Speranza, Gratitudine, Amore, Serenità, Entusiasmo, Calma, Orgoglio</small>
-                </span>
+            {% if correlazione_contesto_data %}
+            <!-- SEZIONE CORRELAZIONE UMORE-CONTESTO SOCIALE -->
+            <div class="chart-section" style="margin-top: 30px;">
+                <h2>🔗 Correlazione Umore - Contesto Sociale</h2>
+                <p class="chart-description">
+                    Questa analisi mostra come lo stato emotivo del paziente varia in base al contesto sociale.
+                    Permette di identificare quali contesti sono associati a emozioni positive o negative.
+                </p>
+
+                <!-- INSIGHTS CONTESTO -->
+                <div class="context-insights-grid">
+                    <div class="context-insight-card positive">
+                        <div class="insight-content">
+                            <h3>Contesto Più Positivo</h3>
+                            <p><strong>{{ correlazione_contesto_data.contesto_migliore }}</strong> - Media emotiva: {{ correlazione_contesto_data.contesto_migliore_media }}/4</p>
                         </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #9c27b0;"></span>
-                            <span class="legend-text">
-                  <strong>3 - Emozioni Neutre</strong>
-                  <br><small>Sorpresa, Vergogna, Colpa, Confusione, Nostalgia, Inadeguatezza, Imbarazzo</small>
-                </span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #ffc107;"></span>
-                            <span class="legend-text">
-                  <strong>2 - Emozioni Ansiose</strong>
-                  <br><small>Ansia, Preoccupazione, Nervosismo, Stanchezza</small>
-                </span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #f44336;"></span>
-                            <span class="legend-text">
-                  <strong>1 - Emozioni Negative</strong>
-                  <br><small>Tristezza, Rabbia, Paura, Disgusto, Frustrazione, Solitudine, Delusione, Malinconia, Disperazione</small>
-                </span>
+                    </div>
+                    <div class="context-insight-card alert">
+                        <div class="insight-content">
+                            <h3>Contesto Più Critico</h3>
+                            <p><strong>{{ correlazione_contesto_data.contesto_peggiore }}</strong> - Media emotiva: {{ correlazione_contesto_data.contesto_peggiore_media }}/4</p>
                         </div>
                     </div>
                 </div>
+
+                <!-- GRAFICO A BARRE RAGGRUPPATE -->
+                <div class="chart-container" style="height: 400px; margin-top: 20px;">
+                    <canvas id="contextEmotionChart"></canvas>
+                </div>
+
+                <!-- GRAFICO MEDIA EMOTIVA PER CONTESTO -->
+                <h3 style="margin-top: 30px;">📈 Media Emotiva per Contesto</h3>
+                <p class="chart-description">
+                    Questo grafico mostra la media emotiva per ogni contesto sociale,
+                    permettendo un confronto diretto tra i diversi ambiti della vita del paziente.
+                </p>
+                <div class="chart-container" style="height: 300px; margin-top: 10px;">
+                    <canvas id="contextAverageChart"></canvas>
+                </div>
             </div>
-
-
+            {% endif %}
 
         {% else %}
             <div class="empty-state">
@@ -198,6 +239,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             populateYearFilter();
             createEmotionChart(allDates, allEmotions, allValues);
+            {% if correlazione_contesto_data %}
+            createContextCharts();
+            {% endif %}
         });
 
         function populateYearFilter() {
@@ -494,6 +538,188 @@
                             },
                             grid: {
                                 display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    {% endif %}
+
+    {% if correlazione_contesto_data %}
+        // Dati per i grafici di correlazione contesto
+        const contextLabels = {{ correlazione_contesto_data.labels|safe }};
+        const positiveData = {{ correlazione_contesto_data.positive|safe }};
+        const neutralData = {{ correlazione_contesto_data.neutral|safe }};
+        const anxiousData = {{ correlazione_contesto_data.anxious|safe }};
+        const negativeData = {{ correlazione_contesto_data.negative|safe }};
+        const medieData = {{ correlazione_contesto_data.medie|safe }};
+        const emojisData = {{ correlazione_contesto_data.emojis|safe }};
+
+        function createContextCharts() {
+            // Grafico a barre raggruppate - Distribuzione emozioni per contesto
+            const ctxBar = document.getElementById('contextEmotionChart').getContext('2d');
+
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: contextLabels.map((label, i) => emojisData[i] + ' ' + label),
+                    datasets: [
+                        {
+                            label: 'Positive',
+                            data: positiveData,
+                            backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Neutre',
+                            data: neutralData,
+                            backgroundColor: 'rgba(156, 39, 176, 0.8)',
+                            borderColor: 'rgba(156, 39, 176, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Ansiose',
+                            data: anxiousData,
+                            backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                            borderColor: 'rgba(255, 193, 7, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Negative',
+                            data: negativeData,
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            borderColor: 'rgba(244, 67, 54, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuzione Emozioni per Contesto Sociale',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const datasetIndex = context.datasetIndex;
+                                    const dataIndex = context.dataIndex;
+                                    const total = positiveData[dataIndex] + neutralData[dataIndex] + anxiousData[dataIndex] + negativeData[dataIndex];
+                                    const value = context.parsed.y;
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${percentage}% del totale in questo contesto`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Numero di Note'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Grafico a barre orizzontali - Media emotiva per contesto
+            const ctxAvg = document.getElementById('contextAverageChart').getContext('2d');
+
+            // Colora le barre in base alla media
+            const barColors = medieData.map(media => {
+                if (media >= 3.2) return 'rgba(76, 175, 80, 0.8)';
+                if (media >= 2.5) return 'rgba(156, 39, 176, 0.8)';
+                if (media >= 1.5) return 'rgba(255, 193, 7, 0.8)';
+                return 'rgba(244, 67, 54, 0.8)';
+            });
+
+            const borderColorsMedie = medieData.map(media => {
+                if (media >= 3.2) return 'rgba(76, 175, 80, 1)';
+                if (media >= 2.5) return 'rgba(156, 39, 176, 1)';
+                if (media >= 1.5) return 'rgba(255, 193, 7, 1)';
+                return 'rgba(244, 67, 54, 1)';
+            });
+
+            new Chart(ctxAvg, {
+                type: 'bar',
+                data: {
+                    labels: contextLabels.map((label, i) => emojisData[i] + ' ' + label),
+                    datasets: [{
+                        label: 'Media Emotiva',
+                        data: medieData,
+                        backgroundColor: barColors,
+                        borderColor: borderColorsMedie,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.x;
+                                    let stato = '';
+                                    if (value >= 3.2) stato = '(Positivo)';
+                                    else if (value >= 2.5) stato = '(Equilibrato)';
+                                    else if (value >= 1.5) stato = '(Attenzione)';
+                                    else stato = '(Critico)';
+                                    return `Media: ${value}/4 ${stato}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 4,
+                            title: {
+                                display: true,
+                                text: 'Media Emotiva (1-4)'
+                            },
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    const labels = {
+                                        1: '😢 Negative',
+                                        2: '😰 Ansiose',
+                                        3: '😐 Neutre',
+                                        4: '😊 Positive'
+                                    };
+                                    return labels[value] || value;
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
                             }
                         }
                     }

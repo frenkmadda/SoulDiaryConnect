@@ -1312,12 +1312,88 @@ def analisi_paziente(request):
                 'emozione_frequente_emoji': get_emoji_for_emotion(emozione_piu_frequente[0]),
             }
 
+    # Prepara i dati per le correlazioni umore-contesto sociale
+    correlazione_contesto_data = None
+    if note_diario.exists():
+        # Raccogli dati per correlazione
+        contesto_emozioni = {}  # {contesto: {'positive': n, 'neutral': n, 'anxious': n, 'negative': n, 'total': n, 'sum': n}}
+
+        for nota in note_diario:
+            contesto = nota.contesto_sociale
+            emozione = nota.emozione_predominante
+
+            if contesto and emozione:
+                contesto_lower = contesto.lower().strip()
+                emozione_lower = emozione.lower().strip()
+                categoria_emozione = get_emotion_category(emozione_lower)
+
+                if contesto_lower not in contesto_emozioni:
+                    contesto_emozioni[contesto_lower] = {
+                        'positive': 0,
+                        'neutral': 0,
+                        'anxious': 0,
+                        'negative': 0,
+                        'total': 0,
+                        'sum': 0,
+                        'emoji': get_emoji_for_context(contesto_lower),
+                    }
+
+                contesto_emozioni[contesto_lower][categoria_emozione] += 1
+                contesto_emozioni[contesto_lower]['total'] += 1
+                # Calcola il valore numerico per la media
+                category_score_map = {'positive': 4, 'neutral': 3, 'anxious': 2, 'negative': 1}
+                contesto_emozioni[contesto_lower]['sum'] += category_score_map.get(categoria_emozione, 2)
+
+        if contesto_emozioni:
+            # Ordina per numero totale di occorrenze (decrescente)
+            contesti_ordinati = sorted(contesto_emozioni.items(), key=lambda x: x[1]['total'], reverse=True)
+
+            # Prepara i dati per il grafico a barre raggruppate
+            labels = []
+            positive_data = []
+            neutral_data = []
+            anxious_data = []
+            negative_data = []
+            medie_contesto = []
+            emojis = []
+
+            for contesto, dati in contesti_ordinati:
+                labels.append(contesto.title())
+                positive_data.append(dati['positive'])
+                neutral_data.append(dati['neutral'])
+                anxious_data.append(dati['anxious'])
+                negative_data.append(dati['negative'])
+                media = round(dati['sum'] / dati['total'], 2) if dati['total'] > 0 else 0
+                medie_contesto.append(media)
+                emojis.append(dati['emoji'])
+
+            # Trova contesto più positivo e più negativo
+            contesto_migliore = max(contesti_ordinati, key=lambda x: x[1]['sum'] / x[1]['total'] if x[1]['total'] > 0 else 0)
+            contesto_peggiore = min(contesti_ordinati, key=lambda x: x[1]['sum'] / x[1]['total'] if x[1]['total'] > 0 else 0)
+
+            correlazione_contesto_data = {
+                'labels': json.dumps(labels),
+                'positive': json.dumps(positive_data),
+                'neutral': json.dumps(neutral_data),
+                'anxious': json.dumps(anxious_data),
+                'negative': json.dumps(negative_data),
+                'medie': json.dumps(medie_contesto),
+                'emojis': json.dumps(emojis),
+                'contesto_migliore': contesto_migliore[0].title(),
+                'contesto_migliore_emoji': contesto_migliore[1]['emoji'],
+                'contesto_migliore_media': round(contesto_migliore[1]['sum'] / contesto_migliore[1]['total'], 2) if contesto_migliore[1]['total'] > 0 else 0,
+                'contesto_peggiore': contesto_peggiore[0].title(),
+                'contesto_peggiore_emoji': contesto_peggiore[1]['emoji'],
+                'contesto_peggiore_media': round(contesto_peggiore[1]['sum'] / contesto_peggiore[1]['total'], 2) if contesto_peggiore[1]['total'] > 0 else 0,
+            }
+
     return render(request, 'SoulDiaryConnectApp/analisi_paziente.html', {
         'medico': medico,
         'paziente': paziente_selezionato,
         'emotion_chart_data': emotion_chart_data,
         'statistiche': statistiche,
         'note_diario': note_diario,
+        'correlazione_contesto_data': correlazione_contesto_data,
     })
 
 
