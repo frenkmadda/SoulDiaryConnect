@@ -23,6 +23,175 @@ OLLAMA_MODEL = "llama3.1:8b"  # Cambia in "cbt-assistant" se hai creato il model
 LUNGHEZZA_NOTA_BREVE = 250
 LUNGHEZZA_NOTA_LUNGA = 500
 
+# ============================================================================
+# MODULO CRISI/EMERGENZA
+# ============================================================================
+
+# Parole chiave per rilevare contenuti di rischio
+KEYWORDS_SUICIDIO = [
+    'suicidio', 'suicidarmi', 'suicidarsi', 'uccidermi', 'uccidersi', 'farla finita',
+    'togliermi la vita', 'non voglio più vivere', 'meglio morto', 'meglio morta',
+    'voglio morire', 'vorrei morire', 'mi ammazzo', 'mi ammazzerei', 'pensieri di morte',
+    'buttarmi', 'buttarmi giù', 'lanciarmi', 'impiccarmi', 'tagliarmi le vene',
+    'overdose', 'prendere delle pastiglie', 'finirla', 'non ce la faccio più a vivere',
+    'sarebbe meglio se non ci fossi', 'tutti starebbero meglio senza di me',
+    'non valgo niente', 'non ho motivo di vivere', 'la vita non ha senso',
+    'presto non sarò più un problema', 'ho deciso di farla finita',
+    'ho un piano', 'ho pensato a come farlo', 'questa è la mia ultima',
+]
+
+KEYWORDS_VIOLENZA_STALKING = [
+    'mi picchia', 'mi maltratta', 'mi perseguita', 'stalking', 'stalker',
+    'mi segue', 'mi minaccia', 'minacce', 'violenza', 'abuso', 'abusato', 'abusata',
+    'violentato', 'violentata', 'stupro', 'stuprata', 'stuprato', 'molestie',
+    'molestato', 'molestata', 'aggredito', 'aggredita', 'botte', 'percosse',
+    'picchiato', 'picchiata', 'mi fa del male', 'ho paura di lui', 'ho paura di lei',
+    'mi controlla', 'controllo ossessivo', 'non mi lascia uscire', 'mi isola',
+    'mi terrorizza', 'relazione tossica', 'violenza domestica', 'maltrattamenti', 'picchiarmi',
+    'maltrattarmi', 'perseguitarmi', 'minacciarmi', 'aggredirmi', 'molestarmi', 'abuso sessuale',
+    'picchiato', 'picchiata', 'maltrattato', 'maltrattata', 'perseguitato', 'perseguitata',
+]
+
+KEYWORDS_AUTOLESIONISMO = [
+    'mi taglio', 'mi faccio del male', 'autolesionismo', 'ferirmi', 'farmi male',
+    'bruciarmi', 'graffiarmi', 'punirmi fisicamente', 'mi colpisco', 'mi faccio tagli',
+]
+
+# Numeri di emergenza
+NUMERI_EMERGENZA = {
+    'suicidio': {
+        'principale': {
+            'nome': 'Telefono Azzurro',
+            'numero': '19696',
+            'orari': '24 ore su 24, 7 giorni su 7'
+        },
+        'alternativo': {
+            'nome': 'Telefono Amico Italia',
+            'numero': '02 2327 2327',
+            'orari': 'tutti i giorni dalle 9:00 alle 24:00'
+        }
+    },
+    'violenza': {
+        'principale': {
+            'nome': 'Numero Antiviolenza e Stalking',
+            'numero': '1522',
+            'orari': '24 ore su 24, 7 giorni su 7 (gratuito)'
+        }
+    },
+    'autolesionismo': {
+        'principale': {
+            'nome': 'Telefono Azzurro',
+            'numero': '19696',
+            'orari': '24 ore su 24, 7 giorni su 7'
+        },
+        'alternativo': {
+            'nome': 'Telefono Amico Italia',
+            'numero': '02 2327 2327',
+            'orari': 'tutti i giorni dalle 9:00 alle 24:00'
+        }
+    }
+}
+
+# Messaggi di conforto per tipo di emergenza
+MESSAGGI_CONFORTO = {
+    'suicidio': """Capisco che stai attraversando un momento di grande sofferenza. Quello che provi è reale e importante, e non devi affrontarlo da solo/a. 
+
+In questo momento è fondamentale che tu possa parlare con qualcuno che può aiutarti. Ti prego, contatta subito il tuo medico {nome_medico} al numero {telefono_medico}, oppure:
+
+📞 <strong>Telefono Azzurro: 19696</strong> (attivo 24/7)
+📞 <strong>Telefono Amico Italia: 02 2327 2327</strong> (attivo tutti i giorni dalle 9:00 alle 24:00)
+
+Non sei solo/a. Ci sono persone pronte ad ascoltarti e ad aiutarti in questo momento difficile. La tua vita ha valore.""",
+
+    'violenza': """Mi preoccupo per la tua sicurezza. Quello che stai vivendo non è giusto e non devi affrontarlo da solo/a.
+
+È importante che tu possa ricevere supporto e protezione. Contatta subito il tuo medico {nome_medico} al numero {telefono_medico}, oppure:
+
+📞 <strong>Numero Antiviolenza e Stalking: 1522</strong> (gratuito, attivo 24/7)
+
+Il 1522 offre supporto professionale, anonimo e gratuito. Possono aiutarti a trovare una via d'uscita sicura. Non sei solo/a e meriti di vivere senza paura.""",
+
+    'autolesionismo': """Capisco che stai soffrendo molto e che forse senti il bisogno di sfogare il dolore. Ma ci sono modi più sicuri per gestire queste emozioni intense.
+
+Ti prego, parla con qualcuno che può aiutarti. Contatta il tuo medico {nome_medico} al numero {telefono_medico}, oppure:
+
+📞 <strong>Telefono Azzurro: 19696</strong> (attivo 24/7)
+📞 <strong>Telefono Amico Italia: 02 2327 2327</strong> (attivo tutti i giorni dalle 9:00 alle 24:00)
+
+Non devi affrontare questo da solo/a. Ci sono persone pronte ad ascoltarti senza giudicarti."""
+}
+
+
+def rileva_contenuto_crisi(testo):
+    """
+    Analizza il testo per rilevare contenuti di rischio/crisi.
+
+    Args:
+        testo: Il testo della nota del paziente
+
+    Returns:
+        tuple: (is_emergency, tipo_emergenza)
+               is_emergency: True se rilevato contenuto di rischio
+               tipo_emergenza: 'suicidio', 'violenza', 'autolesionismo', o 'none'
+    """
+    if not testo:
+        return False, 'none'
+
+    testo_lower = testo.lower()
+
+    # Controlla prima il suicidio (priorità più alta)
+    for keyword in KEYWORDS_SUICIDIO:
+        if keyword in testo_lower:
+            logger.warning(f"EMERGENZA RILEVATA - Tipo: suicidio - Keyword: {keyword}")
+            return True, 'suicidio'
+
+    # Controlla violenza/stalking
+    for keyword in KEYWORDS_VIOLENZA_STALKING:
+        if keyword in testo_lower:
+            logger.warning(f"EMERGENZA RILEVATA - Tipo: violenza - Keyword: {keyword}")
+            return True, 'violenza'
+
+    # Controlla autolesionismo
+    for keyword in KEYWORDS_AUTOLESIONISMO:
+        if keyword in testo_lower:
+            logger.warning(f"EMERGENZA RILEVATA - Tipo: autolesionismo - Keyword: {keyword}")
+            return True, 'autolesionismo'
+
+    return False, 'none'
+
+
+def genera_messaggio_emergenza(tipo_emergenza, medico):
+    """
+    Genera il messaggio di emergenza personalizzato con i contatti del medico.
+
+    Args:
+        tipo_emergenza: Il tipo di emergenza rilevata
+        medico: L'oggetto Medico del paziente
+
+    Returns:
+        str: Il messaggio di emergenza formattato
+    """
+    if tipo_emergenza not in MESSAGGI_CONFORTO:
+        return None
+
+    # Prepara i dati del medico
+    nome_medico = f"Dr. {medico.nome} {medico.cognome}" if medico else "il tuo medico"
+
+    # Preferisci il cellulare, altrimenti il telefono dello studio
+    if medico and medico.numero_telefono_cellulare:
+        telefono_medico = medico.numero_telefono_cellulare
+    elif medico and medico.numero_telefono_studio:
+        telefono_medico = medico.numero_telefono_studio
+    else:
+        telefono_medico = "(contattalo via email)"
+
+    messaggio = MESSAGGI_CONFORTO[tipo_emergenza].format(
+        nome_medico=nome_medico,
+        telefono_medico=telefono_medico
+    )
+
+    return messaggio
+
 
 def genera_con_ollama(prompt, max_chars=None, temperature=0.7):
     """
@@ -1086,10 +1255,24 @@ def paziente_home(request):
         spiegazione_emozione = ""
         contesto_sociale = ""
         spiegazione_contesto = ""
+        is_emergency = False
+        tipo_emergenza = 'none'
+        messaggio_emergenza = None
 
         if testo_paziente:
-            if generate_response_flag:
-                testo_supporto = genera_frasi_di_supporto(testo_paziente, paziente)
+            # PRIMA: Controlla se c'è un contenuto di crisi/emergenza
+            is_emergency, tipo_emergenza = rileva_contenuto_crisi(testo_paziente)
+
+            if is_emergency:
+                # Se è una situazione di emergenza, genera il messaggio di sicurezza
+                # e NON genera il supporto automatico dell'LLM
+                messaggio_emergenza = genera_messaggio_emergenza(tipo_emergenza, medico)
+                testo_supporto = ""  # Non generare supporto LLM in emergenza
+                logger.warning(f"EMERGENZA RILEVATA per paziente {paziente.codice_fiscale} - Tipo: {tipo_emergenza}")
+            else:
+                # Situazione normale: genera supporto se richiesto
+                if generate_response_flag:
+                    testo_supporto = genera_frasi_di_supporto(testo_paziente, paziente)
 
             testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
             emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente, paziente)
@@ -1104,7 +1287,10 @@ def paziente_home(request):
                 spiegazione_emozione=spiegazione_emozione,
                 contesto_sociale=contesto_sociale,
                 spiegazione_contesto=spiegazione_contesto,
-                data_nota=timezone.now()
+                data_nota=timezone.now(),
+                is_emergency=is_emergency,
+                tipo_emergenza=tipo_emergenza,
+                messaggio_emergenza=messaggio_emergenza
             )
 
         # PRG Pattern: Redirect dopo POST per evitare duplicazione note al refresh

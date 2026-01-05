@@ -78,12 +78,19 @@
                         <p><strong>Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
                         <p><strong>Nota:</strong> {{ nota.testo_paziente }}</p>
 
-                        {% if nota.testo_supporto %}
+                        {% if nota.is_emergency and nota.messaggio_emergenza %}
+                            <div class="note-separator"></div>
+                            <div class="support-text">
+                                <p><strong>💙 Messaggio Importante:</strong></p>
+                                <p>{{ nota.messaggio_emergenza|safe }}</p>
+                            </div>
+                        {% elif nota.testo_supporto %}
                             <div class="note-separator"></div>
                             <div class="support-text">
                                 <p><strong>💙 Supporto:</strong> {{ nota.testo_supporto }}</p>
                             </div>
                         {% else %}
+                            {% if not nota.is_emergency %}
                             <div class="note-separator"></div>
                             <div class="generate-support-section">
                                 <p style="color: #64748b; font-style: italic; margin-bottom: 12px;">
@@ -96,6 +103,7 @@
                                     </button>
                                 </form>
                             </div>
+                            {% endif %}
                         {% endif %}
 
                         {% if nota.testo_medico or nota.testo_medico == "None" %}

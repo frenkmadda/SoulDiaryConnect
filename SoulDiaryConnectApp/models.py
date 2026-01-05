@@ -36,6 +36,14 @@ class Paziente(models.Model):
         verbose_name_plural = 'Pazienti'
 
 class NotaDiario(models.Model):
+    TIPO_EMERGENZA_CHOICES = [
+        ('none', 'Nessuna emergenza'),
+        ('suicidio', 'Rischio suicidio'),
+        ('violenza', 'Violenza/Stalking'),
+        ('autolesionismo', 'Autolesionismo'),
+        ('abuso', 'Abuso'),
+    ]
+
     id = models.AutoField(primary_key=True)
     paz = models.ForeignKey(Paziente, on_delete=models.CASCADE)
     testo_paziente = models.TextField()
@@ -47,6 +55,10 @@ class NotaDiario(models.Model):
     contesto_sociale = models.CharField(max_length=50, null=True, blank=True)
     spiegazione_contesto = models.TextField(null=True, blank=True)
     data_nota = models.DateTimeField()
+    # Campi per il modulo di emergenza/crisi
+    is_emergency = models.BooleanField(default=False)
+    tipo_emergenza = models.CharField(max_length=20, choices=TIPO_EMERGENZA_CHOICES, default='none')
+    messaggio_emergenza = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'nota_diario'

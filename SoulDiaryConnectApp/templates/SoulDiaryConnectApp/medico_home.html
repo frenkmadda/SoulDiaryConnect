@@ -123,8 +123,14 @@
         {% if paziente_selezionato %}
           {% if note_diario %}
             {% for nota in note_diario %}
-              <div class="note-card">
+              <div class="note-card{% if nota.is_emergency %} emergency-note{% endif %}">
                 <div class="note-header">
+                  {% if nota.is_emergency %}
+                  <div class="emergency-badge">
+                    <span class="emergency-badge-icon">🚨</span>
+                    <span class="emergency-badge-text">EMERGENZA - {{ nota.tipo_emergenza|upper }}</span>
+                  </div>
+                  {% endif %}
                   <p><strong>📅 Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
                   <div class="tags-container">
                     {% if nota.emozione_predominante %}
@@ -164,12 +170,19 @@
 
                 <p><strong>📝 Nota del paziente:</strong> {{ nota.testo_paziente }}</p>
 
+                {% if nota.is_emergency %}
+                <div class="note-separator"></div>
+                <div class="emergency-alert-box">
+                  <p><strong>⚠️ Attenzione:</strong> Questa nota contiene contenuti di rischio. Il paziente ha ricevuto automaticamente i numeri di emergenza appropriati e l'invito a contattarti.</p>
+                </div>
+                {% endif %}
+
                 {% if nota.testo_supporto %}
                   <div class="note-separator"></div>
                   <p><strong>💙 Supporto automatico:</strong> {{ nota.testo_supporto }}</p>
                 {% endif %}
 
-                {% if nota.testo_clinico %}
+                {% if nota.testo_clinico and not nota.is_emergency %}
                   <div class="note-separator"></div>
                   <div class="clinical-text">
                     <p>
