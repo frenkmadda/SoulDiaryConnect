@@ -819,3 +819,54 @@ textarea:focus {
     color: #b91c1c;
 }
 
+/* Badge "Analisi in corso" per note in generazione */
+.generating-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.generating-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.generating-text {
+    letter-spacing: 0.3px;
+}
+
+/* Sezione clinica in generazione */
+.clinical-text.generating {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 2px dashed #f59e0b;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+}
+
+.generating-clinical-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: #92400e;
+    font-weight: 600;
+    font-size: 15px;
+}
+

@@ -48,7 +48,7 @@ class NotaDiario(models.Model):
     paz = models.ForeignKey(Paziente, on_delete=models.CASCADE)
     testo_paziente = models.TextField()
     testo_supporto = models.TextField(null=True, blank=True)
-    testo_clinico = models.TextField()
+    testo_clinico = models.TextField(null=True, blank=True)
     testo_medico = models.TextField(null=True, blank=True)
     emozione_predominante = models.CharField(max_length=50, null=True, blank=True)
     spiegazione_emozione = models.TextField(null=True, blank=True)
@@ -59,6 +59,8 @@ class NotaDiario(models.Model):
     is_emergency = models.BooleanField(default=False)
     tipo_emergenza = models.CharField(max_length=20, choices=TIPO_EMERGENZA_CHOICES, default='none')
     messaggio_emergenza = models.TextField(null=True, blank=True)
+    # Campo per tracciare lo stato di generazione asincrona
+    generazione_in_corso = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'nota_diario'

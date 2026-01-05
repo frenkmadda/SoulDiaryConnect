@@ -133,37 +133,44 @@
                   {% endif %}
                   <p><strong>📅 Data:</strong> {{ nota.data_nota|date:"d/m/Y" }} alle ore {{ nota.data_nota|date:"H:i" }}</p>
                   <div class="tags-container">
-                    {% if nota.emozione_predominante %}
-                      <div class="emotion-wrapper">
-                        <div class="emotion-box emotion-{{ nota.emotion_category }}">
-                          <span class="emotion-emoji">{{ nota.emoji }}</span>
-                          <span class="emotion-text">{{ nota.emozione_predominante|capfirst }}</span>
+                    {% if nota.generazione_in_corso %}
+                      <div class="generating-badge" data-nota-id="{{ nota.id }}">
+                        <span class="generating-spinner"></span>
+                        <span class="generating-text">Analisi in corso...</span>
+                      </div>
+                    {% else %}
+                      {% if nota.emozione_predominante %}
+                        <div class="emotion-wrapper">
+                          <div class="emotion-box emotion-{{ nota.emotion_category }}">
+                            <span class="emotion-emoji">{{ nota.emoji }}</span>
+                            <span class="emotion-text">{{ nota.emozione_predominante|capfirst }}</span>
+                            {% if nota.spiegazione_emozione %}
+                              <span class="info-icon">i</span>
+                            {% endif %}
+                          </div>
                           {% if nota.spiegazione_emozione %}
-                            <span class="info-icon">i</span>
+                            <div class="custom-tooltip">
+                              {{ nota.spiegazione_emozione }}
+                            </div>
                           {% endif %}
                         </div>
-                        {% if nota.spiegazione_emozione %}
-                          <div class="custom-tooltip">
-                            {{ nota.spiegazione_emozione }}
+                      {% endif %}
+                      {% if nota.contesto_sociale %}
+                        <div class="context-wrapper">
+                          <div class="context-box">
+                            <span class="context-emoji">{{ nota.context_emoji }}</span>
+                            <span class="context-text">{{ nota.contesto_sociale|capfirst }}</span>
+                            {% if nota.spiegazione_contesto %}
+                              <span class="info-icon">i</span>
+                            {% endif %}
                           </div>
-                        {% endif %}
-                      </div>
-                    {% endif %}
-                    {% if nota.contesto_sociale %}
-                      <div class="context-wrapper">
-                        <div class="context-box">
-                          <span class="context-emoji">{{ nota.context_emoji }}</span>
-                          <span class="context-text">{{ nota.contesto_sociale|capfirst }}</span>
                           {% if nota.spiegazione_contesto %}
-                            <span class="info-icon">i</span>
+                            <div class="custom-tooltip">
+                              {{ nota.spiegazione_contesto }}
+                            </div>
                           {% endif %}
                         </div>
-                        {% if nota.spiegazione_contesto %}
-                          <div class="custom-tooltip">
-                            {{ nota.spiegazione_contesto }}
-                          </div>
-                        {% endif %}
-                      </div>
+                      {% endif %}
                     {% endif %}
                   </div>
                 </div>
@@ -182,9 +189,17 @@
                   <p><strong>💙 Supporto automatico:</strong> {{ nota.testo_supporto }}</p>
                 {% endif %}
 
-                {% if nota.testo_clinico and not nota.is_emergency %}
+                {% if nota.generazione_in_corso %}
                   <div class="note-separator"></div>
-                  <div class="clinical-text">
+                  <div class="clinical-text generating" id="clinical-section-{{ nota.id }}">
+                    <div class="generating-clinical-badge">
+                      <span class="generating-spinner"></span>
+                      <span>🔬 Analisi clinica in generazione...</span>
+                    </div>
+                  </div>
+                {% elif nota.testo_clinico and not nota.is_emergency %}
+                  <div class="note-separator"></div>
+                  <div class="clinical-text" id="clinical-section-{{ nota.id }}">
                     <p>
                       <button type="button" class="rigenerate-btn" onclick="rigeneraFraseClinica({{ nota.id }}, this)">🔄 Rigenera analisi clinica</button>
                     </p>
@@ -238,7 +253,44 @@
       document.querySelectorAll('.markdown-content').forEach(function(el) {
         el.innerHTML = marked.parse(el.textContent || el.innerText);
       });
+      
+      // Avvia il polling per le note in generazione
+      startPollingGeneratingNotes();
     });
+    
+    // Polling per controllare lo stato delle note in generazione
+    function startPollingGeneratingNotes() {
+      const generatingBadges = document.querySelectorAll('.generating-badge[data-nota-id]');
+      
+      generatingBadges.forEach(function(badge) {
+        const notaId = badge.getAttribute('data-nota-id');
+        pollNoteStatus(notaId);
+      });
+    }
+    
+    function pollNoteStatus(notaId) {
+      const checkStatus = function() {
+        fetch('/api/nota/' + notaId + '/stato/')
+          .then(response => response.json())
+          .then(data => {
+            if (!data.generazione_in_corso) {
+              // La generazione è completata, ricarica la pagina per mostrare i dati aggiornati
+              location.reload();
+            } else {
+              // Continua il polling ogni 3 secondi
+              setTimeout(checkStatus, 3000);
+            }
+          })
+          .catch(error => {
+            console.error('Errore nel polling:', error);
+            // Riprova dopo 5 secondi in caso di errore
+            setTimeout(checkStatus, 5000);
+          });
+      };
+      
+      // Inizia il polling
+      checkStatus();
+    }
   </script>
 </body>
 </html>

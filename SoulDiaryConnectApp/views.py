@@ -6,12 +6,14 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 import requests
 import logging
 import re
 import json
 import hashlib
 import difflib
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -1230,6 +1232,43 @@ def genera_frasi_cliniche(testo, medico, paziente, nota_id=None):
         return f"Errore durante la generazione: {e}"
 
 
+def genera_analisi_in_background(nota_id, testo_paziente, medico, paziente):
+    """
+    Funzione che viene eseguita in un thread separato per generare
+    l'analisi clinica, sentiment e contesto sociale in background.
+    """
+    from django.db import connection
+    try:
+        # Genera le analisi
+        testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
+        emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente, paziente)
+        contesto_sociale, spiegazione_contesto = analizza_contesto_sociale(testo_paziente, paziente)
+        
+        # Aggiorna la nota nel database
+        nota = NotaDiario.objects.get(id=nota_id)
+        nota.testo_clinico = testo_clinico
+        nota.emozione_predominante = emozione_predominante
+        nota.spiegazione_emozione = spiegazione_emozione
+        nota.contesto_sociale = contesto_sociale
+        nota.spiegazione_contesto = spiegazione_contesto
+        nota.generazione_in_corso = False
+        nota.save()
+        
+        logger.info(f"Generazione in background completata per nota {nota_id}")
+    except Exception as e:
+        logger.error(f"Errore nella generazione in background per nota {nota_id}: {e}")
+        # Imposta comunque generazione_in_corso a False per evitare blocchi
+        try:
+            nota = NotaDiario.objects.get(id=nota_id)
+            nota.generazione_in_corso = False
+            nota.testo_clinico = "Errore durante la generazione dell'analisi clinica."
+            nota.save()
+        except:
+            pass
+    finally:
+        connection.close()
+
+
 def paziente_home(request):
     if request.session.get('user_type') != 'paziente':
         return redirect('/login/')
@@ -1250,11 +1289,6 @@ def paziente_home(request):
         testo_paziente = request.POST.get('desc')
         generate_response_flag = request.POST.get('generateResponse') == 'on'
         testo_supporto = ""
-        testo_clinico = ""
-        emozione_predominante = ""
-        spiegazione_emozione = ""
-        contesto_sociale = ""
-        spiegazione_contesto = ""
         is_emergency = False
         tipo_emergenza = 'none'
         messaggio_emergenza = None
@@ -1274,24 +1308,31 @@ def paziente_home(request):
                 if generate_response_flag:
                     testo_supporto = genera_frasi_di_supporto(testo_paziente, paziente)
 
-            testo_clinico = genera_frasi_cliniche(testo_paziente, medico, paziente)
-            emozione_predominante, spiegazione_emozione = analizza_sentiment(testo_paziente, paziente)
-            contesto_sociale, spiegazione_contesto = analizza_contesto_sociale(testo_paziente, paziente)
-
-            NotaDiario.objects.create(
+            # Crea la nota immediatamente con il supporto generato
+            # L'analisi clinica e sentiment verranno generati in background
+            nota = NotaDiario.objects.create(
                 paz=paziente,
                 testo_paziente=testo_paziente,
                 testo_supporto=testo_supporto,
-                testo_clinico=testo_clinico,
-                emozione_predominante=emozione_predominante,
-                spiegazione_emozione=spiegazione_emozione,
-                contesto_sociale=contesto_sociale,
-                spiegazione_contesto=spiegazione_contesto,
+                testo_clinico="",  # Sarà generato in background
+                emozione_predominante="",
+                spiegazione_emozione="",
+                contesto_sociale="",
+                spiegazione_contesto="",
                 data_nota=timezone.now(),
                 is_emergency=is_emergency,
                 tipo_emergenza=tipo_emergenza,
-                messaggio_emergenza=messaggio_emergenza
+                messaggio_emergenza=messaggio_emergenza,
+                generazione_in_corso=True  # Flag per indicare che la generazione è in corso
             )
+            
+            # Avvia la generazione dell'analisi clinica in background
+            thread = threading.Thread(
+                target=genera_analisi_in_background,
+                args=(nota.id, testo_paziente, medico, paziente)
+            )
+            thread.daemon = True
+            thread.start()
 
         # PRG Pattern: Redirect dopo POST per evitare duplicazione note al refresh
         return redirect('paziente_home')
@@ -1303,6 +1344,25 @@ def paziente_home(request):
         'note_diario': note_diario,
         'medico': medico,
     })
+
+
+def controlla_stato_generazione(request, nota_id):
+    """
+    View AJAX per controllare lo stato di generazione di una nota.
+    Usata dal lato medico per aggiornare la UI quando la generazione è completata.
+    """
+    try:
+        nota = NotaDiario.objects.get(id=nota_id)
+        return JsonResponse({
+            'generazione_in_corso': nota.generazione_in_corso,
+            'testo_clinico': nota.testo_clinico if not nota.generazione_in_corso else None,
+            'emozione_predominante': nota.emozione_predominante if not nota.generazione_in_corso else None,
+            'spiegazione_emozione': nota.spiegazione_emozione if not nota.generazione_in_corso else None,
+            'contesto_sociale': nota.contesto_sociale if not nota.generazione_in_corso else None,
+            'spiegazione_contesto': nota.spiegazione_contesto if not nota.generazione_in_corso else None,
+        })
+    except NotaDiario.DoesNotExist:
+        return JsonResponse({'error': 'Nota non trovata'}, status=404)
 
 
 def modifica_testo_medico(request, nota_id):
