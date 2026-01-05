@@ -401,7 +401,8 @@ body {
     border-radius: 10px;
     padding: 16px;
     border-left: 4px solid #1976d2;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .note-preview:hover {
@@ -414,6 +415,22 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+}
+
+.note-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.expand-icon {
+    font-size: 10px;
+    color: #888;
+    transition: transform 0.3s ease;
+}
+
+.note-preview.expanded .expand-icon {
+    transform: rotate(180deg);
 }
 
 .note-date {
@@ -435,6 +452,39 @@ body {
     color: #555;
     font-size: 14px;
     line-height: 1.5;
+}
+
+/* Contenuto completo nascosto di default */
+.note-full-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease, margin 0.3s ease;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.note-full-content p {
+    color: #444;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* Stato espanso */
+.note-preview.expanded .note-excerpt {
+    display: none;
+}
+
+.note-preview.expanded .note-full-content {
+    max-height: 1000px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #ccc;
+}
+
+.note-preview.expanded {
+    background: #e8f4fd;
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
 }
 
 /* SCROLLBAR STYLING */
