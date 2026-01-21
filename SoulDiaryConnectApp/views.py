@@ -893,45 +893,53 @@ def analizza_sentiment(testo, paziente=None):
     if emozione and emozione in EMOZIONI_EMOJI:
         emozione_validata = emozione
     else:
-        # Fallback con la logica esistente di fuzzy matching
-        emozione_validata = 'confusione'
+        # Fuzzy matching: controlla se l'emozione è contenuta parzialmente
+        emozione_validata = None
         for chiave in EMOZIONI_EMOJI.keys():
             if emozione and chiave in emozione:
                 emozione_validata = chiave
                 break
 
         # Controllo sinonimi
-        sinonimi = {
-            'contentezza': 'gioia',
-            'allegria': 'gioia',
-            'contento': 'gioia',
-            'felice': 'felicità',
-            'triste': 'tristezza',
-            'arrabbiato': 'rabbia',
-            'furioso': 'rabbia',
-            'spaventato': 'paura',
-            'impaurito': 'paura',
-            'ansioso': 'ansia',
-            'agitato': 'ansia',
-            'nervoso': 'nervosismo',
-            'stanco': 'stanchezza',
-            'affaticato': 'stanchezza',
-            'angoscia': 'ansia',
-            'angosciato': 'ansia',
-            'confuso': 'confusione',
-            'nostalgico': 'nostalgia',
-            'deluso': 'delusione',
-            'solo': 'solitudine',
-            'isolato': 'solitudine',
-            'frustrato': 'frustrazione',
-            'orgoglioso': 'orgoglio',
-            'imbarazzato': 'imbarazzo',
-            'inadeguato': 'inadeguatezza',
-            'disperato': 'disperazione',
-        }
+        if not emozione_validata:
+            sinonimi = {
+                'contentezza': 'gioia',
+                'allegria': 'gioia',
+                'contento': 'gioia',
+                'felice': 'felicità',
+                'triste': 'tristezza',
+                'arrabbiato': 'rabbia',
+                'furioso': 'rabbia',
+                'spaventato': 'paura',
+                'impaurito': 'paura',
+                'ansioso': 'ansia',
+                'agitato': 'ansia',
+                'nervoso': 'nervosismo',
+                'stanco': 'stanchezza',
+                'affaticato': 'stanchezza',
+                'angoscia': 'ansia',
+                'angosciato': 'ansia',
+                'confuso': 'confusione',
+                'nostalgico': 'nostalgia',
+                'deluso': 'delusione',
+                'solo': 'solitudine',
+                'isolato': 'solitudine',
+                'frustrato': 'frustrazione',
+                'orgoglioso': 'orgoglio',
+                'imbarazzato': 'imbarazzo',
+                'inadeguato': 'inadeguatezza',
+                'disperato': 'disperazione',
+            }
 
-        if emozione and emozione in sinonimi:
-            emozione_validata = sinonimi[emozione]
+            if emozione and emozione in sinonimi:
+                emozione_validata = sinonimi[emozione]
+
+        # Se proprio non troviamo nulla, logga l'errore e mantieni l'output del modello
+        if not emozione_validata:
+            print(f"⚠️ ATTENZIONE: Emozione non valida ricevuta dal modello: '{emozione}'")
+            # Il modello dovrebbe sempre restituire un'emozione valida secondo il prompt
+            # Manteniamo quello che ha restituito il modello senza forzare un fallback
+            emozione_validata = emozione if emozione else None
 
     # Migliora il fallback della spiegazione
     if not spiegazione or (spiegazione and len(spiegazione) < 10):
@@ -945,7 +953,11 @@ def analizza_sentiment(testo, paziente=None):
                 if len(parti) > 1:
                     spiegazione = parti[1].strip()
         else:
-            spiegazione = f"Il testo esprime un vissuto emotivo riconducibile a {emozione_validata}."
+            # Genera spiegazione di fallback solo se abbiamo un'emozione valida
+            if emozione_validata:
+                spiegazione = f"Il testo esprime un vissuto emotivo riconducibile a {emozione_validata}."
+            else:
+                spiegazione = "Analisi emotiva del testo in corso."
 
     print(f"Emozione rilevata: {emozione_validata}, Spiegazione: {spiegazione}")
 
