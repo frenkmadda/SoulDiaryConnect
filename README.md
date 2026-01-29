@@ -2,9 +2,9 @@
 
 **SoulDiaryConnect** is an AI-powered system designed to support patients in their **psychotherapeutic journey** by enabling journaling with **personalized AI feedback**, while keeping the **therapist connected and in control**. 
 The platform allows patients to **log daily experiences**, receive **AI-generated motivational and clinical feedback**, and stay in touch with their physician.
-The AI used is [Mistral 7B OpenOrca](https://huggingface.co/mistralai/Mistral-7B-v0.1).
+The AI used is [Llama 3.1:8B](https://ollama.com/library/llama3.1:8b), running locally via [Ollama](https://ollama.com/).
 <p align="center">
-  <img src="https://github.com/FLaTNNBio/SoulDiaryConnect/blob/e029cedbdc8da70dbec7e5fe89edf20dfc26bb97/media/logo-blu.png" width="250" alt="Logo SoulDiaryConnect">
+  <img src="https://github.com/FLaTNNBio/SoulDiaryConnect2.0/blob/main/media/2-01.png" width="250" alt="Logo SoulDiaryConnect">
 </p>
 
 ---
@@ -15,7 +15,7 @@ The AI used is [Mistral 7B OpenOrca](https://huggingface.co/mistralai/Mistral-7B
 - **Personalized AI** – Doctors can **configure AI responses** to provide **clinical insights** and tailor support to each patient.
 - **Intuitive User Interface** – A web application with **dedicated patient and doctor dashboards**.
 - **Secure Data Management** – Uses **PostgreSQL** for structured data storage.
-- **Advanced NLP Processing** – Powered by **Mistral-7B**, running locally with **llama_cpp**.
+- **Advanced NLP Processing** – Powered by **Llama 3.1:8B**, running locally with **Ollama**.
 - **Multi-User Access** – Patients and doctors have separate roles and functionalities.
 
 ---
@@ -24,7 +24,7 @@ The AI used is [Mistral 7B OpenOrca](https://huggingface.co/mistralai/Mistral-7B
 
 - **Backend**: Django
 - **Frontend**: HTML, CSS, JavaScript
-- **NLP**: Mistral-7B (Quantized GGUF) via llama_cpp
+- **NLP**: Llama 3.1:8B via Ollama
 - **Database**: PostgreSQL
 
 ---
@@ -33,8 +33,8 @@ The AI used is [Mistral 7B OpenOrca](https://huggingface.co/mistralai/Mistral-7B
 
 ### **1️. Clone the repository**
 ```sh
-git clone https://github.com/FLaTNNBio/SoulDiaryConnect.git
-cd SoulDiaryConnect
+git clone https://github.com/FLaTNNBio/SoulDiaryConnect2.0.git
+cd SoulDiaryConnect2.0
 ```
 
 ### **2. Set up a virtual environment**
@@ -85,16 +85,43 @@ Run database migrations:
 python manage.py migrate
 ```
 
-## **5. Load the NLP model (Mistral-7B)**
+## **5. Install and configure Ollama**
 
-Download the [Mistral-7B (quantized GGUF)](https://huggingface.co/TheBloke/Mistral-7B-v0.1-GGUF) model and place it in the 'models/mistral/' directory.
+### **5.1 Install Ollama**
 
-Update the model path in **views.py** and edit the *context size* (**n_ctx** value):
+Download and install Ollama from the [official website](https://ollama.com/download):
 
-```python
-model_path = "SoulDiaryConnectApp/models/mistral/your_mistral-7b-openorca.Q8_0.gguf"
-llama_model = Llama(model_path=model_path, n_ctx=2048)
+- **Windows**: Download the installer and follow the setup wizard
+- **macOS**: `brew install ollama` or download from the website
+- **Linux**: `curl -fsSL https://ollama.com/install.sh | sh`
+
+### **5.2 Download the Llama 3.1:8B model**
+
+Once Ollama is installed, open a terminal and run:
+
+```sh
+ollama pull llama3.1:8b
 ```
+
+This will download the Llama 3.1:8B model (~4.7GB).
+
+### **5.3 Verify Ollama is running**
+
+Start the Ollama service (it usually starts automatically after installation):
+
+```sh
+ollama serve
+```
+
+Verify it's working:
+
+```sh
+ollama list
+```
+
+You should see `llama3.1:8b` in the list of available models.
+
+> **Note**: Ollama runs on `http://localhost:11434` by default. The application is configured to connect to this endpoint automatically.
 
 ## **6. Start the server**
 ```sh
