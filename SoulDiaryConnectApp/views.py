@@ -523,9 +523,9 @@ EMOZIONI_CATEGORIE = {
     'colpa': 'negative',
     'imbarazzo': 'negative',
     'stanchezza': 'negative',
+    'preoccupazione': 'negative',
     # Emozioni ansiose (giallo/ambra)
     'ansia': 'anxious',
-    'preoccupazione': 'anxious',
     'nervosismo': 'anxious',
     'paura': 'anxious',
     # Emozioni neutre/ambivalenti (lilla)
@@ -546,7 +546,6 @@ CONTESTI_EMOJI = {
     'sport': '🏋️',
     'palestra': '💪',
     'tempo libero': '🎮',
-    'hobby': '🎨',
     'viaggi': '✈️',
     'casa': '🏠',
     'finanze': '💰',
